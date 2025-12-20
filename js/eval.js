@@ -35,43 +35,57 @@ class Local {
 }
 
 class Eval {
+  #intervalID = -1;
+
   #hadError = false;
   #token = null;
-
-  #locals = [];
-  #globalNames = {};
-  #globalValues = [];
 
   #lexer = null;
   #evalTable = {};
 
   constructor(source) {
-    console.log(source);
-    this.#lexer = new Lexer(source);
-
+    this.load(source);
     this.#initEvalTable();
   }
 
-  eval() {
-    let value = new ErrorValue("empty script");
-    while (true) {
-      this.#next();
-      if (this.#token.isError()) {
-        break;
-      }
+  load(source) {
+    this.#lexer = new Lexer(source);
+  }
 
-      if (this.#token.isEOF()) {
-        break;
-      }
+  run(source) {
+    this.stop();
 
-      value = this.#eval();
-      console.log(`${value}`);
-      if (this.#hadError) {
-        break;
-      }
+    this.load(source);
+    this.resume();
+  }
+
+  pause() {
+    if (this.#intervalID === -1) {
+      return;
     }
 
-    return value;
+    clearInterval(this.#intervalID);
+  }
+
+  resume() {
+    this.#intervalID = setInterval(this.step.bind(this), 5);
+  }
+
+  stop() {
+    this.pause();
+  }
+
+  step() {
+    this.#next();
+    if (this.#token.isError()) {
+      return new ErrorValue(this.#token.toString());
+    }
+
+    if (this.#token.isEOF()) {
+      return null;
+    }
+
+    return this.#eval();
   }
 
   #initEvalTable() {
@@ -264,10 +278,6 @@ class Eval {
     return this.#token;
   }
 
-  #eof() {
-    return this.#lexer.createToken(TokenType.EOF, "\0");
-  }
-
   #createError(msg) {
     this.#hadError = true;
 
@@ -275,6 +285,3 @@ class Eval {
     return new ErrorValue(`${error}`);
   }
 }
-
-const e = new Eval(`(* (+ 3 2) "oi love")`);
-e.eval();
