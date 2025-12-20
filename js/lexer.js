@@ -1,0 +1,556 @@
+/* WALL
+ * WALL lexer
+ */
+
+"use strict";
+
+/**
+ * Token types
+ *
+ * @readonly
+ * @enum {number}
+ */
+const TokenType = {
+  LPAREN: 0,
+  RPAREN: 1,
+  LBRACKET: 2,
+  RBRACKET: 3,
+  LBRACE: 4,
+  RBRACE: 5,
+
+  DOLLAR: 6,
+  HASH: 7,
+
+  COMMA: 8,
+  DOT: 9,
+  SEMICOLON: 10,
+
+  PLUS: 11,
+  MINUS: 12,
+  STAR: 13,
+  SLASH: 14,
+  SLASH_SLASH: 15,
+  PERCENT: 16,
+
+  BANG: 17,
+  BANG_EQUAL: 18,
+  EQUAL: 19,
+  EQUAL_EQUAL: 20,
+  LESS: 21,
+  LESS_EQUAL: 22,
+  GREATER: 23,
+  GREATER_EQUAL: 24,
+  IS: 25,
+
+  IDENTIFIER: 26,
+  STRING: 27,
+  INTERPOLATION: 28,
+  NUMBER: 29,
+
+  OR: 30,
+  AND: 31,
+
+  PIPE: 32,
+  CARET: 33,
+  AMPERSAND: 34,
+
+  TRUE: 35,
+  FALSE: 36,
+  UNDEFINED: 37,
+
+  FOR: 38,
+  WHILE: 39,
+  BREAK: 40,
+  CONTINUE: 41,
+
+  FUN: 42,
+  RETURN: 43,
+
+  IF: 44,
+  ELSE: 45,
+  COLON: 46,
+  QUESTION: 47,
+
+  LET: 48,
+  CONST: 49,
+
+  ERROR: 254,
+  EOF: 255,
+};
+
+/** Class representing a token */
+class Token {
+  #type = TokenType.ERROR;
+  #lexeme = null;
+
+  #line = 0;
+  #char = 0;
+
+  constructor(tokenType, tokenLexeme, tokenLine, tokenChar) {
+    this.#type = tokenType;
+    this.#lexeme = tokenLexeme;
+    this.#line = tokenLine;
+    this.#char = tokenChar;
+  }
+
+  getType() {
+    return this.#type;
+  }
+
+  getLexeme() {
+    return this.#lexeme;
+  }
+
+  getLine() {
+    return this.#line;
+  }
+
+  getChar() {
+    return this.#char;
+  }
+
+  isError() {
+    return this.getType() == TokenType.ERROR;
+  }
+
+  isEOF() {
+    return this.getType() == TokenType.EOF;
+  }
+
+  toString() {
+    return `${this.#line}:${this.#char}:${this.#type} = ${this.#lexeme}`;
+  }
+}
+
+class Lexer {
+  #source = "";
+  #idx = 0;
+
+  #line = 1;
+  #char = 1;
+
+  constructor(source) {
+    this.#source = source;
+  }
+
+  reset() {
+    this.#source = "";
+    this.#idx = 0;
+
+    this.#line = 1;
+    this.#char = 1;
+  }
+
+  nextToken() {
+    this.#skipSpaces();
+    if (this.#reachedEndOfSource()) {
+      return this.createToken(TokenType.EOF, "EOF");
+    }
+
+    const char = this.#advance();
+
+    if (this.#isAlpha(char)) {
+      return this.#lexIdentifier();
+    }
+
+    if (this.#isDigit(char)) {
+      return this.#lexNumber(char);
+    }
+
+    if (char === '"') {
+      return this.#lexString();
+    }
+
+    switch (char) {
+      case "(":
+        return this.createToken(TokenType.LPAREN, char);
+      case ")":
+        return this.createToken(TokenType.RPAREN, char);
+      case "[":
+        return this.createToken(TokenType.LBRACKET, char);
+      case "]":
+        return this.createToken(TokenType.RBRACKET, char);
+      case "{":
+        return this.createToken(TokenType.LBRACE, char);
+      case "}":
+        return this.createToken(TokenType.RBRACE, char);
+      case "$":
+        return this.createToken(TokenType.DOLLAR, char);
+      case "#":
+        return this.createToken(TokenType.HASH, char);
+      case ",":
+        return this.createToken(TokenType.COMMA, char);
+      case ".":
+        return this.createToken(TokenType.DOT, char);
+      case ";":
+        return this.createToken(TokenType.SEMICOLON, char);
+      case "+":
+        return this.createToken(TokenType.PLUS, char);
+      case "-":
+        return this.createToken(TokenType.MINUS, char);
+      case "*":
+        return this.createToken(TokenType.STAR, char);
+      case "/":
+        return this.createToken(
+          this.#match("/") ? TokenType.SLASH_SLASH : TokenType.SLASH,
+          char,
+        );
+      case "%":
+        return this.createToken(TokenType.PERCENT, char);
+      case "?":
+        return this.createToken(TokenType.QUESTION, char);
+      case ":":
+        return this.createToken(TokenType.COLON, char);
+      case "!":
+        return this.createToken(
+          this.#match("=") ? TokenType.BANG_EQUAL : TokenType.BANG,
+          char,
+        );
+      case "=":
+        return this.createToken(
+          this.#match("=") ? TokenType.EQUAL_EQUAL : TokenType.EQUAL,
+          char,
+        );
+      case "<":
+        return this.createToken(
+          this.#match("=") ? TokenType.LESS_EQUAL : TokenType.LESS,
+          char,
+        );
+      case ">":
+        return this.createToken(
+          this.#match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER,
+          char,
+        );
+    }
+
+    return this.createError(`invalid/unexpected character '${char}'`);
+  }
+
+  /* Wrapper for creating a new error token */
+  createError(msg) {
+    return this.createToken(TokenType.ERROR, msg);
+  }
+
+  /* Wrapper for creating a new Token */
+  createToken(type, value) {
+    return new Token(type, value, this.#line, this.#char);
+  }
+
+  /* Skips all whitespace/useless characters */
+  #skipSpaces() {
+    while (true) {
+      const char = this.#peek();
+      switch (char) {
+        case " ":
+        case "\t":
+        case "\r":
+          this.#advance();
+          break;
+        case "\n":
+          this.#line++;
+          this.#char = 1;
+          this.#advance();
+          break;
+        case "#":
+          this.#skipComment();
+          break;
+        default:
+          return;
+      }
+    }
+  }
+
+  /* Skips a comment */
+  #skipComment() {
+    while (!this.#reachedEndOfSource() && this.#advance() != "\n");
+
+    this.#line++;
+    this.#char = 1;
+  }
+
+  /* Lexes an identifier */
+  #lexIdentifier() {
+    this.#rewind();
+
+    const identifier = this.#readIdentifier();
+    switch (identifier) {
+      case "is":
+        return this.createToken(TokenType.IS, identifier);
+      case "and":
+        return this.createToken(TokenType.AND, identifier);
+      case "or":
+        return this.createToken(TokenType.OR, identifier);
+      case "undefined":
+        return this.createToken(TokenType.UNDEFINED, identifier);
+      case "for":
+        return this.createToken(TokenType.FOR, identifier);
+      case "while":
+        return this.createToken(TokenType.WHILE, identifier);
+      case "break":
+        return this.createToken(TokenType.BREAK, identifier);
+      case "continue":
+        return this.createToken(TokenType.CONTINUE, identifier);
+      case "fun":
+        return this.createToken(TokenType.FUN, identifier);
+      case "return":
+        return this.createToken(TokenType.RETURN, identifier);
+      case "if":
+        return this.createToken(TokenType.IF, identifier);
+      case "else":
+        return this.createToken(TokenType.ELSE, identifier);
+      case "let":
+        return this.createToken(TokenType.LET, identifier);
+      case "const":
+        return this.createToken(TokenType.CONST, identifier);
+    }
+
+    return this.createToken(TokenType.IDENTIFIER, identifier);
+  }
+
+  /* Reads the next identifier */
+  #readIdentifier() {
+    const start = this.#idx;
+    while (!this.#reachedEndOfSource() && this.#isIdentifier(this.#peek())) {
+      this.#advance();
+    }
+
+    return this.#source.substring(start, this.#idx);
+  }
+
+  /* Lexes a number */
+  #lexNumber(char) {
+    if (char === "0") {
+      const radix = this.#advance();
+      switch (radix) {
+        case "x":
+          return this.createToken(TokenType.NUMBER, this.#readHexNumber());
+        case "o":
+          return this.createToken(TokenType.NUMBER, this.#readOctalNumber());
+        case "b":
+          return this.createToken(TokenType.NUMBER, this.#readBinaryNumber());
+      }
+    }
+
+    this.#rewind();
+    return this.createToken(TokenType.NUMBER, this.#readDecimalNumber());
+  }
+
+  /* Reads a hexadecimal number (0-F) */
+  #readHexNumber() {
+    const start = this.#idx;
+    while (!this.#reachedEndOfSource() && this.#isHex(this.#peek())) {
+      this.#advance();
+    }
+
+    const num = this.#source.substring(start, this.#idx);
+    return parseInt(num, 16);
+  }
+
+  /* Reads an octal number (0-7) */
+  #readOctalNumber() {
+    const start = this.#idx;
+    while (!this.#reachedEndOfSource() && this.#isOctal(this.#peek())) {
+      this.#advance();
+    }
+
+    const num = this.#source.substring(start, this.#idx);
+    return parseInt(num, 8);
+  }
+
+  /* Reads a binary number (0/1) */
+  #readBinaryNumber() {
+    const start = this.#idx;
+    while (!this.#reachedEndOfSource() && this.#isBinary(this.#peek())) {
+      this.#advance();
+    }
+
+    const num = this.#source.substring(start, this.#idx);
+    return parseInt(num, 2);
+  }
+
+  /* Reads a decimal number (0-9) */
+  #readDecimalNumber() {
+    const start = this.#idx;
+    while (!this.#reachedEndOfSource() && this.#isDigit(this.#peek())) {
+      this.#advance();
+    }
+
+    const num = this.#source.substring(start, this.#idx);
+    return parseInt(num, 10);
+  }
+
+  /* Lexes a string */
+  #lexString() {
+    let str = "";
+
+    while (!this.#reachedEndOfSource()) {
+      const char = this.#peek();
+
+      if (char === "\n") {
+        return this.createError("unclosed string");
+      }
+
+      if (char == '"') {
+        break;
+      }
+
+      if (char === "\\") {
+        this.#advance();
+
+        const escape = this.#advance();
+        switch (escape) {
+          case "f":
+            str += "\f";
+            continue;
+          case "n":
+            str += "\n";
+            continue;
+          case "r":
+            str += "\r";
+            continue;
+          case "t":
+            str += "\t";
+            continue;
+          case "v":
+            str += "\v";
+            continue;
+          case "0":
+            str += "\0";
+            continue;
+          case "\\":
+            str += "\\";
+            continue;
+          case "'":
+            str += "'";
+            continue;
+          case '"':
+            str += '"';
+            continue;
+          case "x":
+            try {
+              str += this.#readHexEscapeSequence();
+            } catch ({ name, message }) {
+              return this.createError(message);
+            }
+            continue;
+          case "u":
+            try {
+              str += this.#readUnicodeEscapeSequence();
+            } catch ({ name, message }) {
+              return this.createError(message);
+            }
+            continue;
+        }
+
+        return this.createError(`invalid escape sequence: '\\${escape}'`);
+      }
+
+      str += this.#advance();
+    }
+
+    if (this.#reachedEndOfSource()) {
+      return this.createError("unclosed string");
+    }
+
+    this.#advance();
+    return this.createToken(TokenType.STRING, str);
+  }
+
+  #readHexEscapeSequence() {
+    let sequence = "";
+    for (let i = 0; i < 2; ++i) {
+      const c = this.#advance();
+      if (!this.#isHex(c)) {
+        throw new Error(`expected hex number, got '${c}'`);
+      }
+
+      sequence += c;
+    }
+
+    return parseInt(sequence, 16);
+  }
+
+  #readUnicodeEscapeSequence() {
+    let sequence = "";
+    for (let i = 0; i < 4; ++i) {
+      const c = this.#advance();
+      if (!this.#isHex(c)) {
+        throw new Error(`expected hex number, got '${c}'`);
+      }
+
+      sequence += c;
+    }
+
+    return parseInt(sequence, 16);
+  }
+
+  /* Consumes the current character if it matches what was expected */
+  #match(char) {
+    if (this.#reachedEndOfSource() || this.#peek() !== char) {
+      return false;
+    }
+
+    this.#advance();
+    return true;
+  }
+
+  /* Returns the current character */
+  #peek() {
+    return this.#source[this.#idx];
+  }
+
+  /* Advances one character forward in the stream and returns it */
+  #advance() {
+    this.#char++;
+    return this.#source[this.#idx++];
+  }
+
+  /* Rewinds one character */
+  #rewind() {
+    if (this.#idx <= 0) {
+      return;
+    }
+
+    this.#idx--;
+    this.#char--;
+  }
+
+  /* Checks if a character is a letter */
+  #isAlpha(char) {
+    return (char >= "A" && char <= "Z") || (char >= "a" && char <= "z");
+  }
+
+  /* Checks if a character is a valid base-16 number */
+  #isHex(char) {
+    return (
+      this.#isDigit(char) ||
+      (char >= "A" && char <= "F") ||
+      (char >= "a" && char <= "f")
+    );
+  }
+
+  /* Checks if a character is a valid base-8 number */
+  #isOctal(char) {
+    return char >= "0" && char <= "7";
+  }
+
+  /* Checks if a character is a valid base-2 number */
+  #isBinary(char) {
+    return char == "0" || char == "1";
+  }
+
+  /* Checks if a character is a number */
+  #isDigit(char) {
+    return char >= "0" && char <= "9";
+  }
+
+  /* Checks if a character is a valid identifier */
+  #isIdentifier(char) {
+    return char == "_" || this.#isAlpha(char) || this.#isDigit(char);
+  }
+
+  /* Checks if the lexer has reached the end of the source code */
+  #reachedEndOfSource() {
+    return this.#idx >= this.#source.length;
+  }
+}

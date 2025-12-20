@@ -1,0 +1,227 @@
+# LANGUAGE DESIGN
+
+## 1. Symbols
+- *STUFF* ... STUFF is code;
+- <STUFF> ... STUFF is required;
+- /REGEX/ ... REGEX is a regex;
+- A|B ....... A or B exclusive;
+- [STUFF] ... STUFF is optional;
+
+## 2. Identifier
+An identifier is any user-declared name belonging to a variable.
+
+### 2.1. Syntax
+An valid identifier must:
+	1. Start with a character in /[a-zA-Z_]/;
+	2. Optionally, be followed by any number of characters in /[a-ZA-Z0-9_]/.
+
+## 3. Variables
+Variables are containers for values.
+
+### 3.1. Syntax
+Variables are declared using the *let* keyword, followed by an Identifier and,
+optionally, an equal sign followed by an initial value. If the latter is omitted,
+a variable initially contains the special value of "undefined":
+	(let <IDENTIFIER> [<VALUE>])
+
+### 3.2. Types
+Variables are dynamically typed, inferred from the value they hold. Available
+types are:
+	1. Boolean (bool) .................. false, true
+	2. Number (number) ................. 0, 2.5, -8.333
+	3. String (string) ................. "", "Hello!", "-8.333"
+	4. Function (function) ............. fun greet(name) { return "Hello, " + name + "!" }
+	5. Array (array) ................... [], [1, 2], ["Hello!", 2.5, 0]
+	6. Dictionary (dict) ............... {}, {"Key": "Value"}, {1: "One", "Two": 2}
+	7. Undefined (none) ................ undefined
+	9. Type (type) ..................... none, float, type
+
+## 4. Boolean
+Booleans are values that are either true or false
+
+### 4.1. Syntax
+Booleans are created using the built-in values *true* and *false*:
+	(let truthy true)
+	(let falsey false)
+
+## 5. Numbers
+numbers are numbers with fractional parts.
+
+## 5.1. Syntax
+Floating-point Numbers are created using an optional plus or minus sign, followed
+by one or more compulsory digits, optionally followed by an dot and one or more
+compulsory digits:
+	[+|-]</[0-9]+/[./[0-9]+/>]
+
+## 6. Strings
+Strings are collections of characters.
+
+## 6.1. Syntax
+Strings are created by wrapping any characters within a pair of double quotes.
+	
+Special characters
+
+## 7. Functions
+Functions are containers for code.
+
+### 7.1. Syntax
+Functions are declared using the *fun* keyword, followed by compulsory parenthesis
+and, within them, optional arguments, separated by commas, followed by a compulsory
+block:
+	fun ([PARAMETER[, PARAMETER[, ...]]]) <{BLOCK}>
+
+Functions may return values using the *return* keyword:
+	(return (+ 2 2);
+
+Functions are invoked using the function identifier, followed by optional arguments,
+separated by commas, matching the previous function declaration:
+	(<IDENTIFIER> [PARAMETER[, PARAMETER[, ...]]])
+
+### 7.2. Built-in Functions
+
+## 8. Arrays
+Arrays are collections for values.
+
+### 8.1. Syntax
+Arrays are declared using square brackets, within which may be a series of
+optional values of any type (including other arrays,) separated by commas:
+	[[VALUE[, VALUE[, ...]]]]
+
+## 9. Dictionaries
+Dictionaries are collections of keys mapped to values.
+
+### 9.1. Syntax
+Dictionaries are declared using curly braces, within which may be a series of
+optional key-value pairs, mapping keys of any type to values of any type (including
+other dictionaries,) separated by commas:
+	{[<KEY>:<VALUE>[, <KEY>:<VALUE>[, ...]]]}
+
+## 10. Undefined
+Undefined is a special type for variables without a value.
+
+### 10.1. Syntax
+Undefined may be created explicitly using the built-in value *undefined*:
+	let x = undefined
+
+## 11. Types
+Types are a special type, representing the kind of a value.
+
+### 11.1. Syntax
+Types are created using one of the following built-in types:
+	1. bool ....... Boolean;
+	2. int ........ Integer;
+	3. float ...... Floating-point Number;
+	4. string ..... String;
+	5. function ... Function;
+	6. array ...... Array;
+	7. dict ....... Dictionary;
+	8. none ....... Undefined;
+	9. type ....... Type.
+
+## 12. Operators
+Operators are, if you think about it, mathematical functions.
+
+### 12.1. Types
+The following table details the operators, and the their effect on operations
+between types:
+
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| OPERATOR | bool         | number           | string           | function | array        | dict         | none | type |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| call ()  | ERR          | ERR              | ERR              | call     | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| unary +  | ERR          | Positive         | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| unary -  | ERR          | Negative         | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| +        | ERR          | Addition         | Concatenates     | ERR      | Concatenates | Concatenates | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| -        | ERR          | Subtraction      | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| *        | ERR          | Multiplication   | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| /        | ERR          | Division         | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| //       | ERR          | Floor Division   | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| %        | ERR          | Modulo           | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| ~        | ERR          | Bitwise NOT      | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| &        | ERR          | Bitwise AND      | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| ^        | ERR          | Bitwise XOR      | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| |        | ERR          | Bitwise OR       | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| <<       | ERR          | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| >>       | ERR          | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| !        | Logical NOT  | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| ||       | Logical OR   | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| &&       | Logical AND  | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| <        | ERR          | Less Than        | Less Than        | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| <=       | ERR          | Less/Equal To    | Less/Equal To    | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| >        | ERR          | Greater Than     | Greater Than     | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| >=       | ERR          | Greater/Equal To | Greater/Equal To | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| ==       | Equal To     | Equal To         | Equal To         | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| !=       | Not Equal To | Not Equal To     | Not Equal To     | ERR      | ERR          | ERR          | ERR  | ERR  |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+| is       | ERR          | ERR              | ERR              | ERR      | ERR          | ERR          | ERR  | Type |
++----------+--------------+------------------+------------------+----------+--------------+--------------+------+------+
+
+#### 12.1.1. The *is* operator
+The *is* operator checks if the type of the value on the left matches the type
+on the right:
+	"A string" is string // true
+	false is bool        // true
+	1234567890 is string // false
+
+The *is* cannot be used to check if two values have matching types:
+	"String A" is "String B" // error
+	1234 is 5678             // error
+	false is false           // error
+
+### 12.2. Precedence
+The following table details the precedence of operators, in descending order:
+
++----------------+------------------+
+| CATEGORY       | OPERATORS        |
++----------------+------------------+
+| Call           | (), .            |
++----------------+------------------+
+| Unary          | +, -, !, ~       |
++----------------+------------------+
+| Multiplicative | *, /, %          |
++----------------+------------------+
+| Additive       | +, -             |
++----------------+------------------+
+| Shift          | <<, >>           |
++----------------+------------------+
+| Relational     | <, <=, >, >=, is |
++----------------+------------------+
+| Equality       | ==, !=           |
++----------------+------------------+
+| Bitwise AND    | &                |
++----------------+------------------+
+| Bitwise XOR    | ^                |
++----------------+------------------+
+| Bitwise OR     | |                |
++----------------+------------------+
+| Logical AND    | &&               |
++----------------+------------------+
+| Logical OR     | ||               |
++----------------+------------------+
+| Ternary        | ?:               |
++----------------+------------------+
+| Assignment     | =                |
++----------------+------------------+
