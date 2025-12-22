@@ -51,8 +51,8 @@ const TokenType = {
   AND: 31,
 
   PIPE: 32,
-  CARET: 33,
-  AMPERSAND: 34,
+  AMPERSAND: 33,
+  CARET: 34,
 
   TRUE: 35,
   FALSE: 36,
@@ -126,11 +126,17 @@ class Lexer {
   #source = "";
   #idx = 0;
 
+  #prev = null;
+  #curr = null;
+
   #line = 1;
   #char = 1;
 
   constructor(source) {
     this.#source = source;
+
+    this.#curr = this.#nextToken();
+    this.#prev = this.#curr;
   }
 
   reset() {
@@ -141,7 +147,27 @@ class Lexer {
     this.#char = 1;
   }
 
+  peek() {
+    return this.#curr;
+  }
+
   nextToken() {
+    this.#prev = this.#curr;
+    this.#curr = this.#nextToken();
+    return this.#prev;
+  }
+
+  /* Wrapper for creating a new error token */
+  createError(msg) {
+    return this.createToken(TokenType.ERROR, msg);
+  }
+
+  /* Wrapper for creating a new Token */
+  createToken(type, value) {
+    return new Token(type, value, this.#line, this.#char);
+  }
+
+  #nextToken() {
     this.#skipSpaces();
     if (this.#reachedEndOfSource()) {
       return this.createToken(TokenType.EOF, "EOF");
@@ -221,19 +247,21 @@ class Lexer {
           this.#match("=") ? TokenType.GREATER_EQUAL : TokenType.GREATER,
           char,
         );
+      case "|":
+        return this.createToken(
+          this.#match("|") ? TokenType.OR : TokenType.PIPE,
+          char,
+        );
+      case "&":
+        return this.createToken(
+          this.#match("&") ? TokenType.AND : TokenType.AMPERSAND,
+          char,
+        );
+      case "^":
+        return this.createToken(TokenType.CARET, char);
     }
 
     return this.createError(`invalid/unexpected character '${char}'`);
-  }
-
-  /* Wrapper for creating a new error token */
-  createError(msg) {
-    return this.createToken(TokenType.ERROR, msg);
-  }
-
-  /* Wrapper for creating a new Token */
-  createToken(type, value) {
-    return new Token(type, value, this.#line, this.#char);
   }
 
   /* Skips all whitespace/useless characters */
@@ -280,6 +308,10 @@ class Lexer {
         return this.createToken(TokenType.AND, identifier);
       case "or":
         return this.createToken(TokenType.OR, identifier);
+      case "true":
+        return this.createToken(TokenType.TRUE, identifier);
+      case "false":
+        return this.createToken(TokenType.FALSE, identifier);
       case "undefined":
         return this.createToken(TokenType.UNDEFINED, identifier);
       case "for":
@@ -323,60 +355,78 @@ class Lexer {
       const radix = this.#advance();
       switch (radix) {
         case "x":
-          return this.createToken(TokenType.NUMBER, this.#readHexNumber());
+          return this.#readHexNumber();
         case "o":
-          return this.createToken(TokenType.NUMBER, this.#readOctalNumber());
+          return this.#readOctalNumber();
         case "b":
-          return this.createToken(TokenType.NUMBER, this.#readBinaryNumber());
+          return this.#readBinaryNumber();
       }
+
+      this.#rewind();
     }
 
     this.#rewind();
-    return this.createToken(TokenType.NUMBER, this.#readDecimalNumber());
+    return this.#readDecimalNumber();
   }
 
   /* Reads a hexadecimal number (0-F) */
   #readHexNumber() {
+    if (!this.#isHex(this.#peek())) {
+      return this.createError(`expected hex number, got ${this.#peek()}`);
+    }
+
     const start = this.#idx;
     while (!this.#reachedEndOfSource() && this.#isHex(this.#peek())) {
       this.#advance();
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return parseInt(num, 16);
+    return this.createToken(TokenType.NUMBER, parseInt(num, 16));
   }
 
   /* Reads an octal number (0-7) */
   #readOctalNumber() {
+    if (!this.#isOctal(this.#peek())) {
+      return this.createError(`expected octal number, got ${this.#peek()}`);
+    }
+
     const start = this.#idx;
     while (!this.#reachedEndOfSource() && this.#isOctal(this.#peek())) {
       this.#advance();
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return parseInt(num, 8);
+    return this.createToken(TokenType.NUMBER, parseInt(num, 8));
   }
 
   /* Reads a binary number (0/1) */
   #readBinaryNumber() {
+    if (!this.#isBinary(this.#peek())) {
+      return this.createError(`expected binary number, got ${this.#peek()}`);
+    }
+
     const start = this.#idx;
     while (!this.#reachedEndOfSource() && this.#isBinary(this.#peek())) {
       this.#advance();
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return parseInt(num, 2);
+    return this.createToken(TokenType.NUMBER, parseInt(num, 2));
   }
 
   /* Reads a decimal number (0-9) */
   #readDecimalNumber() {
+    if (!this.#isDigit(this.#peek())) {
+      return this.createError(`expected decimal number, got ${this.#peek()}`);
+    }
+
     const start = this.#idx;
     while (!this.#reachedEndOfSource() && this.#isDigit(this.#peek())) {
       this.#advance();
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return parseInt(num, 10);
+    return this.createToken(TokenType.NUMBER, parseInt(num, 10));
   }
 
   /* Lexes a string wrapped in quotes */

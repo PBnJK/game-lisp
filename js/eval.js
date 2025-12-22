@@ -196,8 +196,6 @@ class Eval {
       bool: new TypeValue(ValueType.BOOL, (value) => {
         const v = value.getValue();
         switch (value.getType()) {
-          case ValueType.BOOL:
-            return value;
           case ValueType.NUMBER:
             return new BoolValue(v !== 0);
           case ValueType.STRING:
@@ -267,12 +265,12 @@ class Eval {
     }
 
     const result = this.#eval();
+    console.log(this.#token, result);
     switch (result.getType()) {
       case ValueType.FUNCTION:
       case ValueType.NATIVE_FUNCTION:
-        return this.#callFunction(result);
       case ValueType.TYPE:
-        return this.#callType(result);
+        return this.#callFunction(result);
     }
 
     return result;
@@ -294,7 +292,7 @@ class Eval {
     }
 
     if (next.getType() === TokenType.LPAREN) {
-      return new ErrorValue("func declarations not yet supported");
+      return this.#evalFunction(identifier.getLexeme());
     }
 
     const value = this.#eval();
@@ -309,6 +307,59 @@ class Eval {
 
     this.#addIdentifier(identifier.getLexeme(), value);
     return value;
+  }
+
+  /* Evaluates a function declaration */
+  #evalFunction(name) {
+    const params = [];
+    while (true) {
+      this.#next();
+      if (this.#token.getType() === TokenType.EOF) {
+        return this.#createError("unexpected EOF mid function call");
+      }
+
+      if (this.#token.getType() === TokenType.RPAREN) {
+        break;
+      }
+
+      params.push(this.#token);
+    }
+
+    const err = this.#check(TokenType.LPAREN);
+    if (this.#hadError) {
+      return err;
+    }
+
+    const code = [];
+    let level = 0;
+
+    let running = true;
+    while (running) {
+      this.#next();
+
+      switch (this.#token.getType()) {
+        case TokenType.LPAREN:
+          ++level;
+          code.push(this.#token);
+          break;
+        case TokenType.RPAREN:
+          if (level === 0) {
+            running = false;
+            break;
+          }
+          --level;
+          code.push(this.#token);
+          break;
+        case TokenType.ERROR:
+          return this.#createError("asfasf");
+        case TokenType.EOF:
+          return new ErrorValue("unexpected EOF in function body");
+        default:
+          code.push(this.#token);
+      }
+    }
+
+    return new FunctionValue(name, args, code);
   }
 
   /* Evaluates a binary operation */
@@ -346,19 +397,12 @@ class Eval {
       args.push(this.#eval());
     }
 
-    return func.call(args);
-  }
-
-  #callType(type) {
-    const arg = this.#advance();
-    const err = this.#check(TokenType.RPAREN);
-    if (this.#hadError) {
-      return err;
+    if (func.getType() === ValueType.NATIVE_FUNCTION) {
+      return func.call(args);
     }
-
-    return type.call(arg);
   }
 
+  /* Pushes a new env to the env stack */
   #pushEnv(env) {
     if (this.#envs.length === 256) {
       return;
@@ -367,6 +411,7 @@ class Eval {
     this.#envs.push(env);
   }
 
+  /* Pops the topmost env from the env stack */
   #popEnv() {
     if (this.#envs.length === 0) {
       return;

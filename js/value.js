@@ -71,6 +71,18 @@ class Value {
     return new ErrorValue(`cannot perform ${this} / ${rhs}`);
   }
 
+  mod(rhs) {
+    return new ErrorValue(`cannot perform ${this} % ${rhs}`);
+  }
+
+  negate() {
+    return new ErrorValue(`cannot perform -${this}`);
+  }
+
+  not() {
+    return new ErrorValue(`cannot perform !${this}`);
+  }
+
   eq(rhs) {
     return new ErrorValue(`cannot perform ${this} == ${rhs}`);
   }
@@ -143,6 +155,10 @@ class BoolValue extends Value {
     return this.#value;
   }
 
+  not() {
+    return new BoolValue(!this.getValue());
+  }
+
   eq(rhs) {
     if (rhs.getType() == ValueType.BOOL) {
       return new BoolValue(this.getValue() == rhs.getValue());
@@ -211,6 +227,19 @@ class NumberValue extends Value {
     }
 
     super.div(rhs);
+  }
+
+  mod(rhs) {
+    const rhsValue = rhs.getValue();
+    if (rhs.getType() === ValueType.NUMBER) {
+      return new NumberValue(this.getValue() % rhsValue);
+    }
+
+    super.mod(rhs);
+  }
+
+  negate() {
+    return new NumberValue(-this.getValue());
   }
 
   eq(rhs) {

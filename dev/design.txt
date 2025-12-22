@@ -6,6 +6,7 @@
 - /REGEX/ ... REGEX is a regex;
 - A|B ....... A or B exclusive;
 - [STUFF] ... STUFF is optional;
+- (BLOCK) ... A parenthesis BLOCK
 
 ## 2. Identifier
 An identifier is any user-declared name belonging to a variable.
@@ -30,7 +31,7 @@ types are:
 	1. Boolean (bool) .................. false, true
 	2. Number (number) ................. 0, 2.5, -8.333
 	3. String (string) ................. "", "Hello!", "-8.333"
-	4. Function (function) ............. fun greet(name) { return "Hello, " + name + "!" }
+	4. Function (function) ............. (let greet (name) ((return (+ "Hello, " (+ name "!")))))
 	5. Array (array) ................... [], [1, 2], ["Hello!", 2.5, 0]
 	6. Dictionary (dict) ............... {}, {"Key": "Value"}, {1: "One", "Two": 2}
 	7. Undefined (none) ................ undefined
@@ -68,10 +69,10 @@ Functions are containers for code.
 Functions are declared using the *fun* keyword, followed by compulsory parenthesis
 and, within them, optional arguments, separated by commas, followed by a compulsory
 block:
-	fun ([PARAMETER[, PARAMETER[, ...]]]) <{BLOCK}>
+  (fun a (a b c) <(BLOCK)>)
 
 Functions may return values using the *return* keyword:
-	(return (+ 2 2);
+	(return (+ 2 2));
 
 Functions are invoked using the function identifier, followed by optional arguments,
 separated by commas, matching the previous function declaration:
@@ -101,7 +102,7 @@ Undefined is a special type for variables without a value.
 
 ### 10.1. Syntax
 Undefined may be created explicitly using the built-in value *undefined*:
-	let x = undefined
+	(let x undefined)
 
 ## 11. Types
 Types are a special type, representing the kind of a value.
@@ -182,46 +183,11 @@ between types:
 #### 12.1.1. The *is* operator
 The *is* operator checks if the type of the value on the left matches the type
 on the right:
-	"A string" is string // true
-	false is bool        // true
-	1234567890 is string // false
+	(is "A string" string) // true
+	(is false bool)        // true
+	(is 12.34 string)      // false
 
 The *is* cannot be used to check if two values have matching types:
-	"String A" is "String B" // error
-	1234 is 5678             // error
-	false is false           // error
-
-### 12.2. Precedence
-The following table details the precedence of operators, in descending order:
-
-+----------------+------------------+
-| CATEGORY       | OPERATORS        |
-+----------------+------------------+
-| Call           | (), .            |
-+----------------+------------------+
-| Unary          | +, -, !, ~       |
-+----------------+------------------+
-| Multiplicative | *, /, %          |
-+----------------+------------------+
-| Additive       | +, -             |
-+----------------+------------------+
-| Shift          | <<, >>           |
-+----------------+------------------+
-| Relational     | <, <=, >, >=, is |
-+----------------+------------------+
-| Equality       | ==, !=           |
-+----------------+------------------+
-| Bitwise AND    | &                |
-+----------------+------------------+
-| Bitwise XOR    | ^                |
-+----------------+------------------+
-| Bitwise OR     | |                |
-+----------------+------------------+
-| Logical AND    | &&               |
-+----------------+------------------+
-| Logical OR     | ||               |
-+----------------+------------------+
-| Ternary        | ?:               |
-+----------------+------------------+
-| Assignment     | =                |
-+----------------+------------------+
+	(is "String A" "String B") // error
+	(is 1234 5678)             // error
+	(is false true)            // error
