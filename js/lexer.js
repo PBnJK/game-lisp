@@ -1,5 +1,5 @@
-/* WALL
- * WALL lexer
+/* GameLISP
+ * GameLISP lexer
  */
 
 "use strict";
@@ -379,7 +379,7 @@ class Lexer {
     return parseInt(num, 10);
   }
 
-  /* Lexes a string */
+  /* Lexes a string wrapped in quotes */
   #lexString() {
     let str = "";
 
@@ -456,6 +456,7 @@ class Lexer {
     return this.createToken(TokenType.STRING, str);
   }
 
+  /* Reads a hex escape sequence (\xXX) */
   #readHexEscapeSequence() {
     let sequence = "";
     for (let i = 0; i < 2; ++i) {
@@ -470,6 +471,7 @@ class Lexer {
     return parseInt(sequence, 16);
   }
 
+  /* Reads a unicode escape sequence (\uXXXX) */
   #readUnicodeEscapeSequence() {
     let sequence = "";
     for (let i = 0; i < 4; ++i) {
@@ -481,7 +483,8 @@ class Lexer {
       sequence += c;
     }
 
-    return parseInt(sequence, 16);
+    const charcode = parseInt(sequence, 16);
+    return String.fromCharCode(charcode);
   }
 
   /* Consumes the current character if it matches what was expected */

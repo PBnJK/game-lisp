@@ -18,6 +18,7 @@
     <script src="js/value.js"></script>
     <script src="js/eval.js"></script>
     <script src="js/vm.js"></script>
+    <script src="js/env.js"></script>
 
     <script src="js/script.js" defer></script>
   </head>
@@ -31,6 +32,7 @@
             name="editor-code-editor"
             rows="40"
             cols="80"
+            placeholder='try: (print "hello world!")'
           ></textarea>
         </div>
       </div>
@@ -51,7 +53,11 @@
                 id="runner-play-pause-button"
                 title="Play"
               >
-                <img src="assets/icons/icn_play.svg" alt="Play" />
+                <img
+                  id="runner-play-pause-icon"
+                  src="assets/icons/icn_play.svg"
+                  alt="Play"
+                />
               </button>
               <button
                 class="runner-button"
@@ -83,6 +89,7 @@
             id="runner-console"
             name="runner-console"
             disabled="true"
+            placeholder="messages/errors will appear here"
           ></textarea>
         </div>
       </div>

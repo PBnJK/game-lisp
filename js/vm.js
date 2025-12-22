@@ -1,5 +1,5 @@
-/* WALL
- * WALL VM
+/* GameLISP
+ * GameLISP VM
  */
 
 "use strict";
@@ -11,6 +11,8 @@ const VMStatus = {
 };
 
 class VM {
+  #intervalID = -1;
+
   #eval = null;
   #status = VMStatus.STOPPED;
 
@@ -22,23 +24,59 @@ class VM {
   }
 
   step() {
-    switch (this.getStatus()) {
-      case VMStatus.STOPPED:
-        break;
-      case VMStatus.PAUSED:
-        this.#eval.eval();
-        break;
-      case VMStatus.RUNNING:
-        this.#eval.pause();
-        break;
+    if (this.isStopped()) {
+      return;
     }
+
+    if (this.isRunning()) {
+      this.pause();
+    }
+
+    this.#step();
   }
 
-  play() {}
+  run() {
+    if (this.#intervalID !== -1) {
+      this.stop();
+    }
 
-  pause() {}
+    vm.setStatus(VMStatus.RUNNING);
+    this.#intervalID = setInterval(this.#step.bind(this));
+  }
 
-  stop() {}
+  pause() {
+    if (this.#intervalID !== -1) {
+      clearInterval(this.#intervalID);
+      this.#intervalID = -1;
+    }
+
+    vm.setStatus(VMStatus.PAUSED);
+  }
+
+  stop() {
+    if (this.#intervalID !== -1) {
+      clearInterval(this.#intervalID);
+      this.#intervalID = -1;
+    }
+
+    vm.setStatus(VMStatus.STOPPED);
+  }
+
+  #step() {
+    console.log(this.#eval.step());
+  }
+
+  isRunning() {
+    return this.getStatus() === VMStatus.RUNNING;
+  }
+
+  isPaused() {
+    return this.getStatus() === VMStatus.PAUSED;
+  }
+
+  isStopped() {
+    return this.getStatus() === VMStatus.STOPPED;
+  }
 
   setStatus(to) {
     this.#status = to;

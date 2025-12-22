@@ -1,5 +1,5 @@
-/* WALL
- * WALL evaluator
+/* GameLISP
+ * GameLISP evaluator
  */
 
 "use strict";
@@ -7,11 +7,13 @@
 const ValueType = {
   BOOL: 0,
   NUMBER: 1,
-  FUNCTION: 2,
-  ARRAY: 3,
-  DICT: 4,
-  NONE: 5,
-  TYPE: 6,
+  STRING: 2,
+  FUNCTION: 3,
+  NATIVE_FUNCTION: 4,
+  ARRAY: 5,
+  DICT: 6,
+  NONE: 7,
+  TYPE: 8,
   ERROR: 255,
 };
 
@@ -23,6 +25,8 @@ function valueTypeToString(type) {
       return "number";
     case ValueType.FUNCTION:
       return "function";
+    case ValueType.NATIVE_FUNCTION:
+      return "native_function";
     case ValueType.ARRAY:
       return "array";
     case ValueType.DICT:
@@ -104,6 +108,18 @@ class Value {
     }
 
     return greater.negate();
+  }
+
+  is(rhs) {
+    if (rhs.getType() === ValueType.TYPE) {
+      return rhs.is(this);
+    }
+
+    return new ErrorValue(`cannot perform ${this} is ${rhs}`);
+  }
+
+  call() {
+    return new ErrorValue(`cannot call ${this}`);
   }
 
   getType() {
@@ -271,7 +287,7 @@ class StringValue extends Value {
   }
 
   toString() {
-    return `"${this.getValue()}"`;
+    return this.getValue();
   }
 }
 
@@ -299,29 +315,88 @@ class FunctionValue extends Value {
     return this.#code;
   }
 
+  call(args) {
+    return args;
+  }
+
   toString() {
     asString = this.getName() + "(";
     for (const [arg, type] of this.getArgs()) {
       asString += `${arg}: ${valueTypeToString(type)}, `;
     }
     asString += ")";
+
+    return asString;
+  }
+}
+
+class NativeFunctionValue extends Value {
+  #fn = () => {};
+  #arity = -1;
+
+  constructor(fn, arity) {
+    super(ValueType.NATIVE_FUNCTION);
+    this.#fn = fn;
+    this.#arity = arity;
+  }
+
+  getArity() {
+    return this.#arity;
+  }
+
+  getValue() {
+    return this.#fn;
+  }
+
+  call(args) {
+    const arity = this.getArity();
+    if (arity !== -1 && args.length !== arity) {
+      return new ErrorValue(
+        `error calling ${this} (expected ${arity} arguments, received ${args.length})`,
+      );
+    }
+
+    return this.#fn(...args);
+  }
+
+  toString() {
+    const name = this.getValue().name;
+    const arity = this.getArity();
+
+    return `<native_function ${name}, ${arity === -1 ? arity : "..."} args>`;
   }
 }
 
 class TypeValue extends Value {
   #value = ValueType.NONE;
+  #caster = () => {};
 
-  constructor(value) {
-    super(ValueType.FUNCTION);
+  constructor(value, caster) {
+    super(ValueType.TYPE);
+
     this.#value = value;
+    this.#caster = caster;
   }
 
   getValue() {
     return this.#value;
   }
 
+  is(rhs) {
+    return new BoolValue(rhs.getType() === this.getValue());
+  }
+
+  call(args) {
+    const value = args[0];
+    if (value.getType() === this.getValue()) {
+      return value;
+    }
+
+    return this.#caster(value);
+  }
+
   toString() {
-    return `"${this.getValue()}"`;
+    return `<type "${this.getValue()}">`;
   }
 }
 
@@ -338,6 +413,6 @@ class ErrorValue extends Value {
   }
 
   toString() {
-    return `ERR: "${this.getValue()}"`;
+    return `ERR: ${this.getValue()}`;
   }
 }

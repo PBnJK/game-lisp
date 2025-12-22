@@ -1,5 +1,5 @@
-/* WALL
- * WALL evaluator
+/* GameLISP
+ * GameLISP evaluator
  */
 
 "use strict";
@@ -35,44 +35,23 @@ class Local {
 }
 
 class Eval {
-  #intervalID = -1;
-
   #hadError = false;
   #token = null;
 
   #lexer = null;
+
   #evalTable = {};
+  #envs = [];
 
   constructor(source) {
     this.load(source);
+
     this.#initEvalTable();
+    this.#initGlobalEnv();
   }
 
   load(source) {
     this.#lexer = new Lexer(source);
-  }
-
-  run(source) {
-    this.stop();
-
-    this.load(source);
-    this.resume();
-  }
-
-  pause() {
-    if (this.#intervalID === -1) {
-      return;
-    }
-
-    clearInterval(this.#intervalID);
-  }
-
-  resume() {
-    this.#intervalID = setInterval(this.step.bind(this), 5);
-  }
-
-  stop() {
-    this.pause();
   }
 
   step() {
@@ -176,6 +155,16 @@ class Eval {
         return lhs.gteq(rhs);
       },
 
+      [TokenType.IDENTIFIER]: () => {
+        const k = this.#token.getLexeme();
+        const envIdx = this.#findIdentifier(k);
+        if (envIdx === -1) {
+          return new ErrorValue(`unknown identifier "${k}"`);
+        }
+
+        const env = this.#envs[envIdx];
+        return env.getIdentifier(k);
+      },
       [TokenType.NUMBER]: () => {
         return new NumberValue(this.#token.getLexeme());
       },
@@ -199,6 +188,66 @@ class Eval {
     });
   }
 
+  #initGlobalEnv() {
+    const globalEnv = new Env();
+
+    /* Types */
+    globalEnv.addFromObject({
+      bool: new TypeValue(ValueType.BOOL, (value) => {
+        const v = value.getValue();
+        switch (value.getType()) {
+          case ValueType.BOOL:
+            return value;
+          case ValueType.NUMBER:
+            return new BoolValue(v !== 0);
+          case ValueType.STRING:
+            return new BoolValue(c.length !== 0);
+          case ValueType.NONE:
+            return new BoolValue(false);
+        }
+
+        return new ErrorValue(`cannot cast ${value} to bool`);
+      }),
+      number: new TypeValue(ValueType.NUMBER, (value) => {
+        const v = value.getValue();
+        switch (value.getType()) {
+          case ValueType.BOOL:
+            return new NumberValue(v ? 1 : 0);
+          case ValueType.STRING:
+            return new NumberValue(v.parseInt(10));
+        }
+
+        return new ErrorValue(`cannot cast ${value} to number`);
+      }),
+      string: new TypeValue(ValueType.STRING, (value) => {
+        const v = value.getValue();
+        switch (value.getType()) {
+          case ValueType.BOOL:
+            return new StringValue(v ? "true" : "false");
+          case ValueType.NUMBER:
+            return new StringValue(v.toString());
+        }
+
+        return new ErrorValue(`cannot cast ${value} to string`);
+      }),
+      function: new TypeValue(ValueType.FUNCTION, (value) => {
+        return new ErrorValue(`cannot cast ${value} to function`);
+      }),
+    });
+
+    /* Functions */
+    globalEnv.addFromObject({
+      print: new NativeFunctionValue((...args) => {
+        const str = args.join(" ");
+
+        printToConsole(str);
+        return new StringValue(str);
+      }, -1),
+    });
+
+    this.#pushEnv(globalEnv);
+  }
+
   #eval() {
     const fn = this.#evalTable[this.#token.getType()];
     if (fn === undefined) {
@@ -220,9 +269,10 @@ class Eval {
     const result = this.#eval();
     switch (result.getType()) {
       case ValueType.FUNCTION:
-        return this.#callFunction();
+      case ValueType.NATIVE_FUNCTION:
+        return this.#callFunction(result);
       case ValueType.TYPE:
-        return this.#callType();
+        return this.#callType(result);
     }
 
     return result;
@@ -232,7 +282,34 @@ class Eval {
   #evalIf() {}
 
   /* Evaluates a let statement */
-  #evalLet() {}
+  #evalLet() {
+    const identifier = this.#next();
+    if (this.#hadError) {
+      return identifier;
+    }
+
+    const next = this.#next();
+    if (this.#hadError) {
+      return next;
+    }
+
+    if (next.getType() === TokenType.LPAREN) {
+      return new ErrorValue("func declarations not yet supported");
+    }
+
+    const value = this.#eval();
+    if (this.#hadError) {
+      return value;
+    }
+
+    const err = this.#check(TokenType.RPAREN);
+    if (this.#hadError) {
+      return err;
+    }
+
+    this.#addIdentifier(identifier.getLexeme(), value);
+    return value;
+  }
 
   /* Evaluates a binary operation */
   #evalBinary() {
@@ -254,9 +331,90 @@ class Eval {
     return [lhs, rhs];
   }
 
-  #callFunction() {}
+  #callFunction(func) {
+    const args = [];
+    while (true) {
+      this.#next();
+      if (this.#token.getType() === TokenType.EOF) {
+        return this.#createError("unexpected EOF mid function call");
+      }
 
-  #callType() {}
+      if (this.#token.getType() === TokenType.RPAREN) {
+        break;
+      }
+
+      args.push(this.#eval());
+    }
+
+    return func.call(args);
+  }
+
+  #callType(type) {
+    const arg = this.#advance();
+    const err = this.#check(TokenType.RPAREN);
+    if (this.#hadError) {
+      return err;
+    }
+
+    return type.call(arg);
+  }
+
+  #pushEnv(env) {
+    if (this.#envs.length === 256) {
+      return;
+    }
+
+    this.#envs.push(env);
+  }
+
+  #popEnv() {
+    if (this.#envs.length === 0) {
+      return;
+    }
+
+    this.#envs.pop();
+  }
+
+  #addIdentifier(k, v) {
+    const localEnvIdx = this.#envs.length - 1;
+    const localEnv = this.#envs[localEnvIdx];
+    if (localEnv.hasIdentifier(k)) {
+      return this.#createError(`identifier ${k} already exists in local scope`);
+    }
+
+    localEnv.setIdentifier(k, v);
+  }
+
+  #setIdentifier(k, v) {
+    let envIdx = this.#findIdentifier(k);
+    if (envIdx === -1) {
+      envIdx = this.#envs.length - 1;
+    }
+
+    const env = this.#envs[envIdx];
+    env.setIdentifier(k, v);
+  }
+
+  #getIdentifer(k) {
+    const envIdx = this.#findIdentifier(k);
+    if (envIdx === -1) {
+      return this.#createError(`no such identifier ${k}`);
+    }
+
+    const env = this.#envs[envIdx];
+    return env.getIdentifier(k);
+  }
+
+  #findIdentifier(identifier) {
+    for (let i = this.#envs.length - 1; i >= 0; --i) {
+      const env = this.#envs[i];
+      if (env.hasIdentifier(identifier)) {
+        return i;
+      }
+    }
+
+    return -1;
+  }
 
   #advance() {
     this.#next();
@@ -265,6 +423,7 @@ class Eval {
 
   #next() {
     this.#token = this.#lexer.nextToken();
+    return this.#token;
   }
 
   #check(tokenType) {

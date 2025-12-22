@@ -1,32 +1,109 @@
+/* GameLISP
+ * Main script
+ */
+
+const codeEditor = document.getElementById("editor-code-editor");
+
+const runnerPlayPauseIcon = document.getElementById("runner-play-pause-icon");
 const runnerConsole = document.getElementById("runner-console");
 
 const vm = new VM();
 
+let cachedHash = null;
+
 function main() {
   const runnerStep = document.getElementById("runner-step-button");
-  runnerStep.addEventListener("click", (e) => {});
+  runnerStep.addEventListener("click", (e) => {
+    vm.step();
+    switchToPlayIcon();
+  });
 
   const runnerPlayPause = document.getElementById("runner-play-pause-button");
-  runnerPlayPause.addEventListener("click", (e) => {});
+  runnerPlayPause.addEventListener("click", (e) => {
+    if (vm.isRunning()) {
+      vm.pause();
+      switchToPlayIcon();
+    } else {
+      loadIfNeeded();
+      vm.run();
+      switchToPauseIcon();
+    }
+  });
 
   const runnerStop = document.getElementById("runner-stop-button");
-  runnerStop.addEventListener("click", (e) => {});
+  runnerStop.addEventListener("click", (e) => {
+    vm.stop();
+    switchToPlayIcon();
+  });
 
   const runnerTrash = document.getElementById("runner-trash-button");
   runnerTrash.addEventListener("click", () => {
     runnerConsole.value = "";
   });
-
-  runnerConsole.value = "asfasfasfafs";
 }
 
+/* Sets the pause/play icon to paused */
+function switchToPauseIcon() {
+  runnerPlayPauseIcon.setAttribute("src", "assets/icons/icn_pause.svg");
+  runnerPlayPauseIcon.setAttribute("alt", "Pause");
+}
+
+/* Sets the pause/play icon to play */
+function switchToPlayIcon() {
+  runnerPlayPauseIcon.setAttribute("src", "assets/icons/icn_play.svg");
+  runnerPlayPauseIcon.setAttribute("alt", "Play");
+}
+
+/* Loads code into the VM if needed */
+function loadIfNeeded() {
+  const source = codeEditor.value.trim();
+  if (!vm.isStopped()) {
+    if (cachedHash !== null) {
+      const hashed = cyrb53(source);
+      if (hashed === cachedHash) {
+        return;
+      }
+    }
+  }
+
+  vm.load(source);
+  cachedHash = cyrb53(source);
+}
+
+/* Prints a string to the console with a newline */
 function printToConsole(str) {
   printToConsoleRaw(str);
   printToConsoleRaw("\n");
 }
 
+/* Prints a string to the console as-is */
 function printToConsoleRaw(str) {
   runnerConsole.value += str;
+}
+
+/* Fast hashing function for strings
+ *
+ * Very lightly adapted from:
+ *   https://stackoverflow.com/a/52171480
+ *
+ * Thank you to byrc!
+ */
+function cyrb53(str, seed = 0) {
+  let h1 = 0xdeadbeef ^ seed;
+  let h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0, ch; i < str.length; i++) {
+    ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+  h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+  h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 }
 
 main();
