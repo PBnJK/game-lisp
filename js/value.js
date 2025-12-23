@@ -332,6 +332,10 @@ class FunctionValue extends Value {
     this.#code = code;
   }
 
+  getArity() {
+    return this.#args.length;
+  }
+
   getName() {
     return this.#name;
   }
@@ -350,8 +354,8 @@ class FunctionValue extends Value {
 
   toString() {
     asString = this.getName() + "(";
-    for (const [arg, type] of this.getArgs()) {
-      asString += `${arg}: ${valueTypeToString(type)}, `;
+    for (const arg of this.getArgs()) {
+      asString += `${arg}, `;
     }
     asString += ")";
 

@@ -22,7 +22,6 @@ function main() {
   runnerPlayPause.addEventListener("click", (e) => {
     if (vm.isRunning()) {
       vm.pause();
-      switchToPlayIcon();
     } else {
       loadIfNeeded();
       vm.run();

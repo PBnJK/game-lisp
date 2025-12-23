@@ -41,6 +41,8 @@ class VM {
     this.#fp = 0;
 
     this.#constants = compiler.getConstants();
+
+    this.#initGlobalEnv();
   }
 
   step() {
@@ -60,6 +62,8 @@ class VM {
       this.stop();
     }
 
+    switchToPauseIcon();
+
     this.setStatus(VMStatus.RUNNING);
     this.#intervalID = setInterval(this.#step.bind(this));
   }
@@ -70,6 +74,7 @@ class VM {
       this.#intervalID = -1;
     }
 
+    switchToPlayIcon();
     this.setStatus(VMStatus.PAUSED);
   }
 
@@ -79,6 +84,7 @@ class VM {
       this.#intervalID = -1;
     }
 
+    switchToPlayIcon();
     this.setStatus(VMStatus.STOPPED);
   }
 
@@ -180,7 +186,6 @@ class VM {
         const a = this.#pop();
         const b = this.#pop();
 
-        console.log(a, b);
         this.#push(a.add(b));
       },
       [Opcode.SUB]: () => {
@@ -249,15 +254,28 @@ class VM {
           return;
         }
 
+        const localEnv = new Env();
+
+        const args = fn.getArgs();
+        for (let i = args.length - 1; i >= 0; --i) {
+          const arg = args[i];
+          const value = this.#pop();
+          localEnv.setIdentifier(arg, value);
+        }
+
+        this.#pushEnv(localEnv);
+
         const frame = fn.getValue();
         this.#pushFrame(frame);
       },
       [Opcode.RETURN]: () => {
-        this.#frames.pop();
-        if (this.#frames.length === 0) {
+        if (this.#frameIdx === 0) {
           this.stop();
           return;
         }
+
+        this.#frames.pop();
+        --this.#frameIdx;
 
         this.#fp = this.#pop();
         this.#popEnv();
@@ -324,14 +342,13 @@ class VM {
       }, -1),
     });
 
-    this.#pushEnv(globalEnv);
+    this.#envs = [globalEnv];
   }
 
   #step() {
     const op = this.#next();
 
     const fn = this.#handlers[op];
-    console.log(op);
     fn();
   }
 
@@ -371,7 +388,6 @@ class VM {
   /* Pushes a new frame */
   #pushFrame(frame) {
     this.#push(this.#fp);
-    this.#pushEnv(new Env());
 
     this.#frames.push(frame);
     ++this.#frameIdx;

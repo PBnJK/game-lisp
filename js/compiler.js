@@ -50,26 +50,32 @@ class Compiler {
 
   constructor(source) {
     this.#lexer = new Lexer(source);
-
     this.#initHandlers();
+  }
+
+  addConstants(constants) {
+    this.#constants.push.apply(this.#constants, constants);
   }
 
   compile() {
     while (true) {
-      this.#next();
-      this.#sExpression();
-
+      this.step();
       if (this.#token.isError()) {
         printToConsole(this.#token.toString());
         break;
       }
 
-      if (this.#token.isEOF()) {
+      if (this.#peek().isEOF()) {
         break;
       }
     }
 
     this.#emit(Opcode.RETURN);
+  }
+
+  step() {
+    this.#next();
+    this.#sExpression();
   }
 
   getConstants() {
@@ -93,15 +99,11 @@ class Compiler {
         this.#binary(Opcode.ADD);
       },
       [TokenType.MINUS]: () => {
-        this.#next();
-        this.#sExpression();
-
+        this.step();
         if (this.#peek().getType() === TokenType.RPAREN) {
           this.#emit(Opcode.NEGATE);
         } else {
-          this.#next();
-          this.#sExpression();
-
+          this.step();
           this.#emit(Opcode.SUB);
         }
       },
@@ -120,8 +122,7 @@ class Compiler {
           "expected identifier",
         );
 
-        this.#next();
-        this.#sExpression();
+        this.step();
 
         const idx = this.#defineConstant(identifier.getLexeme());
         this.#emit(Opcode.SET_VARIABLE, idx);
@@ -130,9 +131,7 @@ class Compiler {
         this.#binary(Opcode.EQUAL);
       },
       [TokenType.BANG]: () => {
-        this.#next();
-        this.#sExpression();
-
+        this.step();
         this.#emit(Opcode.NOT);
       },
       [TokenType.BANG_EQUAL]: () => {
@@ -160,12 +159,47 @@ class Compiler {
             break;
           }
 
-          this.#next();
-          this.#sExpression();
+          this.step();
           ++argCount;
         }
 
         this.#emit(Opcode.CALL, argCount, idx);
+      },
+      [TokenType.FUN]: () => {
+        const identifier = this.#expect(
+          TokenType.IDENTIFIER,
+          "expected identifier",
+        );
+
+        this.#expect(TokenType.LPAREN);
+
+        const args = [];
+        while (true) {
+          if (this.#peek().getType() !== TokenType.IDENTIFIER) {
+            break;
+          }
+
+          const arg = this.#next();
+          args.push(arg.getLexeme());
+        }
+
+        this.#expect(TokenType.RPAREN, "expected closing parenthesis ')'");
+
+        const fp = this.#getFP() + 1;
+        this.#next();
+        this.#block();
+
+        const name = identifier.getLexeme();
+        const code = this.#opcodes.slice(fp);
+        this.#opcodes.splice(fp);
+
+        code.push(Opcode.RETURN);
+        const fn = new FunctionValue(name, args, code);
+
+        const nameIdx = this.#defineConstant(name);
+        const fnIdx = this.#defineConstant(fn);
+
+        this.#emit(Opcode.GET_CONST, fnIdx, Opcode.DEF_VARIABLE, nameIdx);
       },
       [TokenType.LET]: () => {
         const identifier = this.#expect(
@@ -173,13 +207,7 @@ class Compiler {
           "expected identifier",
         );
 
-        this.#next();
-        if (this.#token.getType() === TokenType.LPAREN) {
-          this.#functionDeclaration();
-          return;
-        }
-
-        this.#sExpression();
+        this.step();
 
         const idx = this.#defineConstant(identifier.getLexeme());
         this.#emit(Opcode.DEF_VARIABLE, idx);
@@ -197,19 +225,35 @@ class Compiler {
     });
   }
 
+  #block() {
+    while (true) {
+      console.log(`BLOCK ${this.#token} ${this.#peek()}`);
+      if (this.#peek().getType() === TokenType.RPAREN) {
+        break;
+      }
+
+      this.step();
+    }
+  }
+
   #sExpression() {
+    console.log(`SEXPR ${this.#token} ${this.#peek()}`);
+
     switch (this.#token.getType()) {
       case TokenType.LPAREN:
         this.#next();
         this.#expression();
         break;
       case TokenType.IDENTIFIER:
+        console.log("SEXPR identifier");
         this.#identifier();
         break;
       case TokenType.STRING:
+        console.log("SEXPR str");
         this.#string();
         break;
       case TokenType.NUMBER:
+        console.log("SEXPR number");
         this.#number();
         break;
       case TokenType.TRUE:
@@ -218,10 +262,14 @@ class Compiler {
       case TokenType.FALSE:
         this.#emit(Opcode.FALSE);
         break;
+      default:
+        this.#throw(`unexpected token ${this.#token}`);
     }
   }
 
   #expression() {
+    console.log(` EXPR ${this.#token} ${this.#peek()}`);
+
     const handler = this.#handlers[this.#token.getType()];
     handler();
 
@@ -229,11 +277,8 @@ class Compiler {
   }
 
   #binary(op) {
-    this.#next();
-    this.#sExpression();
-
-    this.#next();
-    this.#sExpression();
+    this.step();
+    this.step();
 
     this.#emit(op);
   }
@@ -259,8 +304,6 @@ class Compiler {
     this.#emit(Opcode.GET_CONST, idx);
   }
 
-  #functionDeclaration() {}
-
   #defineConstant(value) {
     const idx = this.#constants.findIndex((v) => v === value);
     if (idx === -1) {
@@ -268,6 +311,10 @@ class Compiler {
     }
 
     return idx;
+  }
+
+  #getFP() {
+    return this.#constants.length - 1;
   }
 
   #emit(...ops) {
