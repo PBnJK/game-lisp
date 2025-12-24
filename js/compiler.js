@@ -196,8 +196,8 @@ class Compiler {
         code.push(Opcode.RETURN);
         const fn = new FunctionValue(name, args, code);
 
-        const nameIdx = this.#defineConstant(name);
         const fnIdx = this.#defineConstant(fn);
+        const nameIdx = this.#defineConstant(name);
 
         this.#emit(Opcode.GET_CONST, fnIdx, Opcode.DEF_VARIABLE, nameIdx);
       },
@@ -227,33 +227,28 @@ class Compiler {
 
   #block() {
     while (true) {
-      console.log(`BLOCK ${this.#token} ${this.#peek()}`);
-      if (this.#peek().getType() === TokenType.RPAREN) {
+      this.#next();
+      if (this.#token.getType() === TokenType.RPAREN) {
         break;
       }
 
-      this.step();
+      this.#sExpression();
     }
   }
 
   #sExpression() {
-    console.log(`SEXPR ${this.#token} ${this.#peek()}`);
-
     switch (this.#token.getType()) {
       case TokenType.LPAREN:
         this.#next();
         this.#expression();
         break;
       case TokenType.IDENTIFIER:
-        console.log("SEXPR identifier");
         this.#identifier();
         break;
       case TokenType.STRING:
-        console.log("SEXPR str");
         this.#string();
         break;
       case TokenType.NUMBER:
-        console.log("SEXPR number");
         this.#number();
         break;
       case TokenType.TRUE:
@@ -268,8 +263,6 @@ class Compiler {
   }
 
   #expression() {
-    console.log(` EXPR ${this.#token} ${this.#peek()}`);
-
     const handler = this.#handlers[this.#token.getType()];
     handler();
 
@@ -305,7 +298,9 @@ class Compiler {
   }
 
   #defineConstant(value) {
-    const idx = this.#constants.findIndex((v) => v === value);
+    const idx = this.#constants.findIndex((v) => {
+      return v === value;
+    });
     if (idx === -1) {
       return this.#constants.push(value) - 1;
     }
@@ -314,7 +309,7 @@ class Compiler {
   }
 
   #getFP() {
-    return this.#constants.length - 1;
+    return this.#opcodes.length - 1;
   }
 
   #emit(...ops) {

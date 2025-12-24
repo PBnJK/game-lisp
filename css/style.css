@@ -52,7 +52,7 @@ body {
   font-size: 14px;
 }
 
-#runner-header {
+#region-header {
   display: flex;
   flex-direction: row;
   align-items: center;
@@ -60,7 +60,7 @@ body {
   gap: 24px;
 }
 
-#runner-button-container {
+#region-button-container {
   display: flex;
   flex-direction: row;
 
@@ -68,7 +68,7 @@ body {
   margin-bottom: 8px;
 }
 
-.runner-button {
+.region-button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -80,7 +80,7 @@ body {
   height: 32px;
 }
 
-.runner-button:hover {
+.region-button:hover {
   cursor: pointer;
   background-color: var(--bg-highlight);
 }

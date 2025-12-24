@@ -425,8 +425,15 @@ class Lexer {
       this.#advance();
     }
 
+    if (this.#peek() === ".") {
+      this.#advance();
+      while (!this.#reachedEndOfSource() && this.#isDigit(this.#peek())) {
+        this.#advance();
+      }
+    }
+
     const num = this.#source.substring(start, this.#idx);
-    return this.createToken(TokenType.NUMBER, parseInt(num, 10));
+    return this.createToken(TokenType.NUMBER, parseFloat(num));
   }
 
   /* Lexes a string wrapped in quotes */

@@ -353,7 +353,7 @@ class FunctionValue extends Value {
   }
 
   toString() {
-    asString = this.getName() + "(";
+    let asString = this.getName() + "(";
     for (const arg of this.getArgs()) {
       asString += `${arg}, `;
     }

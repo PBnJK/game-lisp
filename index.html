@@ -26,7 +26,20 @@
     <main id="wrapper">
       <div id="editor">
         <div id="editor-code">
-          <h2 class="region-title" id="editor-code-title">Code Editor</h2>
+          <div id="region-header">
+            <h2 class="region-title" id="editor-code-title">Code Editor</h2>
+            <div id="region-button-container">
+              <a
+                class="region-button"
+                id="editor-docs-button"
+                title="Docs"
+                target="_blank"
+                href="docs.html"
+              >
+                <img src="assets/icons/icn_docs.svg" alt="Docs" />
+              </a>
+            </div>
+          </div>
           <textarea
             id="editor-code-editor"
             name="editor-code-editor"
@@ -37,19 +50,19 @@
         </div>
       </div>
       <div id="runner">
-        <div id="runner-header">
+        <div id="region-header">
           <h2 class="region-title" id="runner-title">Runner</h2>
           <div id="runner-controls">
-            <div id="runner-button-container">
+            <div id="region-button-container">
               <button
-                class="runner-button"
+                class="region-button"
                 id="runner-step-button"
                 title="Step"
               >
                 <img src="assets/icons/icn_step.svg" alt="Step" />
               </button>
               <button
-                class="runner-button"
+                class="region-button"
                 id="runner-play-pause-button"
                 title="Play"
               >
@@ -60,7 +73,7 @@
                 />
               </button>
               <button
-                class="runner-button"
+                class="region-button"
                 id="runner-stop-button"
                 title="Stop"
               >
@@ -73,11 +86,11 @@
           Your browser doesn't support the HTML canvas :-(
         </canvas>
         <div id="runner-console-wrapper">
-          <div id="runner-header">
+          <div id="region-header">
             <h3 class="region-subtitle" id="runner-console-title">Console</h3>
-            <div id="runner-button-container">
+            <div id="region-button-container">
               <button
-                class="runner-button"
+                class="region-button"
                 id="runner-trash-button"
                 title="Clean"
               >
