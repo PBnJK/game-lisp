@@ -41,8 +41,9 @@ const Opcode = {
   RETURN: 24,
 
   DOT: 25,
+  IS: 26,
 
-  IMPORT: 26,
+  IMPORT: 27,
 };
 
 class Compiler {
@@ -186,6 +187,9 @@ class Compiler {
       [TokenType.GREATER_EQUAL]: () => {
         this.#binary(Opcode.GREATER_EQUAL);
       },
+      [TokenType.IS]: () => {
+        this.#binary(Opcode.IS);
+      },
       [TokenType.IDENTIFIER]: () => {
         const lexeme = this.#token.getLexeme();
         const idx = this.#defineConstant(lexeme);
@@ -253,6 +257,19 @@ class Compiler {
         const nameIdx = this.#defineConstant(name);
 
         this.#emit(Opcode.GET_CONST, fnIdx, Opcode.DEF_VARIABLE, nameIdx);
+      },
+      [TokenType.IF]: () => {
+        this.step();
+
+        /* Zero is temporary, will be patched later down */
+        this.#emit(Opcode.JUMP_IF_FALSE, 0);
+        const fpPatch = this.#getFP();
+
+        this.#next();
+        this.#block();
+
+        const fpCurrent = this.#getFP();
+        this.#opcodes[fpPatch] = fpCurrent - fpPatch;
       },
       [TokenType.LET]: () => {
         const identifier = this.#expect(

@@ -299,6 +299,12 @@ class VM {
 
         this.#push(a.dot(b));
       },
+      [Opcode.IS]: () => {
+        const b = this.#pop();
+        const a = this.#pop();
+
+        this.#push(a.is(b));
+      },
       [Opcode.IMPORT]: () => {
         const modIdx = this.#next();
         const modIdent = this.#constants[modIdx];
