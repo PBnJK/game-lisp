@@ -26,53 +26,61 @@ const TokenType = {
   SEMICOLON: 10,
 
   PLUS: 11,
-  MINUS: 12,
-  STAR: 13,
-  SLASH: 14,
-  SLASH_SLASH: 15,
-  PERCENT: 16,
+  PLUS_EQUAL: 12,
+  MINUS: 13,
+  MINUS_EQUAL: 14,
+  STAR: 15,
+  STAR_EQUAL: 16,
+  SLASH: 17,
+  SLASH_EQUAL: 18,
+  SLASH_SLASH: 19,
+  SLASH_SLASH_EQUAL: 20,
+  PERCENT: 21,
+  PERCENT_EQUAL: 22,
 
-  BANG: 17,
-  BANG_EQUAL: 18,
-  EQUAL: 19,
-  EQUAL_EQUAL: 20,
-  LESS: 21,
-  LESS_EQUAL: 22,
-  GREATER: 23,
-  GREATER_EQUAL: 24,
-  IS: 25,
+  BANG: 23,
+  BANG_EQUAL: 24,
+  EQUAL: 25,
+  EQUAL_EQUAL: 26,
+  LESS: 27,
+  LESS_EQUAL: 28,
+  GREATER: 29,
+  GREATER_EQUAL: 30,
+  IS: 31,
 
-  IDENTIFIER: 26,
-  STRING: 27,
-  INTERPOLATION: 28,
-  NUMBER: 29,
+  IDENTIFIER: 32,
+  STRING: 33,
+  INTERPOLATION: 34,
+  NUMBER: 35,
 
-  OR: 30,
-  AND: 31,
+  OR: 36,
+  AND: 37,
 
-  PIPE: 32,
-  AMPERSAND: 33,
-  CARET: 34,
+  PIPE: 38,
+  AMPERSAND: 39,
+  CARET: 40,
 
-  TRUE: 35,
-  FALSE: 36,
-  UNDEFINED: 37,
+  TRUE: 41,
+  FALSE: 42,
+  UNDEFINED: 43,
 
-  FOR: 38,
-  WHILE: 39,
-  BREAK: 40,
-  CONTINUE: 41,
+  FOR: 44,
+  WHILE: 45,
+  BREAK: 46,
+  CONTINUE: 47,
 
-  FUN: 42,
-  RETURN: 43,
+  FUN: 48,
+  RETURN: 49,
 
-  IF: 44,
-  ELSE: 45,
-  COLON: 46,
-  QUESTION: 47,
+  IF: 50,
+  ELSE: 51,
+  COLON: 52,
+  QUESTION: 53,
 
-  LET: 48,
-  CONST: 49,
+  LET: 54,
+  CONST: 55,
+
+  IMPORT: 56,
 
   ERROR: 254,
   EOF: 255,
@@ -118,7 +126,7 @@ class Token {
   }
 
   toString() {
-    return `${this.#line}:${this.#char}:${this.#type} = ${this.#lexeme}`;
+    return `"${this.#lexeme}" (${this.#type})`;
   }
 }
 
@@ -211,18 +219,38 @@ class Lexer {
       case ";":
         return this.createToken(TokenType.SEMICOLON, char);
       case "+":
-        return this.createToken(TokenType.PLUS, char);
-      case "-":
-        return this.createToken(TokenType.MINUS, char);
-      case "*":
-        return this.createToken(TokenType.STAR, char);
-      case "/":
         return this.createToken(
-          this.#match("/") ? TokenType.SLASH_SLASH : TokenType.SLASH,
+          this.#match("=") ? TokenType.PLUS_EQUAL : TokenType.PLUS,
+          char,
+        );
+      case "-":
+        return this.createToken(
+          this.#match("=") ? TokenType.MINUS_EQUAL : TokenType.MINUS,
+          char,
+        );
+      case "*":
+        return this.createToken(
+          this.#match("=") ? TokenType.STAR_EQUAL : TokenType.STAR,
+          char,
+        );
+      case "/":
+        if (this.#match("/")) {
+          return this.createToken(
+            this.#match("=")
+              ? TokenType.SLASH_SLASH_EQUAL
+              : TokenType.SLASH_SLASH,
+            char,
+          );
+        }
+        return this.createToken(
+          this.#match("=") ? TokenType.SLASH_EQUAL : TokenType.SLASH,
           char,
         );
       case "%":
-        return this.createToken(TokenType.PERCENT, char);
+        return this.createToken(
+          this.#match("=") ? TokenType.PERCENT_EQUAL : TokenType.PERCENT,
+          char,
+        );
       case "?":
         return this.createToken(TokenType.QUESTION, char);
       case ":":
@@ -334,6 +362,8 @@ class Lexer {
         return this.createToken(TokenType.LET, identifier);
       case "const":
         return this.createToken(TokenType.CONST, identifier);
+      case "import":
+        return this.createToken(TokenType.IMPORT, identifier);
     }
 
     return this.createToken(TokenType.IDENTIFIER, identifier);

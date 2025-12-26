@@ -46,7 +46,9 @@ body {
 #editor-code-editor {
   resize: none;
 
+  margin: 0;
   padding: 8px;
+
   border: 2px solid;
 
   font-size: 14px;
@@ -56,6 +58,8 @@ body {
   display: flex;
   flex-direction: row;
   align-items: center;
+
+  height: 40px;
 
   gap: 24px;
 }

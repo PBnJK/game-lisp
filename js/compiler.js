@@ -2,6 +2,8 @@
  * GameLISP compiler
  */
 
+"use strict";
+
 const Opcode = {
   GET_CONST: 0,
 
@@ -37,6 +39,10 @@ const Opcode = {
 
   CALL: 23,
   RETURN: 24,
+
+  DOT: 25,
+
+  IMPORT: 26,
 };
 
 class Compiler {
@@ -58,8 +64,10 @@ class Compiler {
   }
 
   compile() {
+    printToConsole("Starting compilation...");
+
     while (true) {
-      this.step();
+      this.#next();
       if (this.#token.isError()) {
         printToConsole(this.#token.toString());
         break;
@@ -68,9 +76,19 @@ class Compiler {
       if (this.#peek().isEOF()) {
         break;
       }
+
+      try {
+        this.#sExpression();
+      } catch (error) {
+        printToConsole(error);
+        console.log(error);
+        break;
+      }
     }
 
     this.#emit(Opcode.RETURN);
+
+    printToConsole("Finished compiling!");
   }
 
   step() {
@@ -98,6 +116,9 @@ class Compiler {
       [TokenType.PLUS]: () => {
         this.#binary(Opcode.ADD);
       },
+      [TokenType.PLUS_EQUAL]: () => {
+        this.#binaryAssign(Opcode.ADD);
+      },
       [TokenType.MINUS]: () => {
         this.step();
         if (this.#peek().getType() === TokenType.RPAREN) {
@@ -107,14 +128,30 @@ class Compiler {
           this.#emit(Opcode.SUB);
         }
       },
+
+      [TokenType.MINUS_EQUAL]: () => {
+        this.#binaryAssign(Opcode.SUB);
+      },
       [TokenType.STAR]: () => {
         this.#binary(Opcode.MUL);
+      },
+      [TokenType.STAR_EQUAL]: () => {
+        this.#binaryAssign(Opcode.MUL);
       },
       [TokenType.SLASH]: () => {
         this.#binary(Opcode.DIV);
       },
+      [TokenType.SLASH_EQUAL]: () => {
+        this.#binaryAssign(Opcode.DIV);
+      },
       [TokenType.PERCENT]: () => {
         this.#binary(Opcode.MOD);
+      },
+      [TokenType.PERCENT_EQUAL]: () => {
+        this.#binaryAssign(Opcode.MOD);
+      },
+      [TokenType.DOT]: () => {
+        this.#binary(Opcode.DOT);
       },
       [TokenType.EQUAL]: () => {
         const identifier = this.#expect(
@@ -165,6 +202,22 @@ class Compiler {
 
         this.#emit(Opcode.CALL, argCount, idx);
       },
+      [TokenType.WHILE]: () => {
+        const fpCondition = this.#getFP();
+        this.step();
+
+        /* Zero is temporary, will be patched later down */
+        this.#emit(Opcode.JUMP_IF_FALSE, 0);
+        const fpPatch = this.#getFP();
+
+        this.#next();
+        this.#block();
+
+        const fpCurrent = this.#getFP();
+        this.#opcodes[fpPatch] = fpCurrent - fpPatch + 2;
+
+        this.#emit(Opcode.JUMP, fpCondition - fpCurrent - 2);
+      },
       [TokenType.FUN]: () => {
         const identifier = this.#expect(
           TokenType.IDENTIFIER,
@@ -211,6 +264,15 @@ class Compiler {
 
         const idx = this.#defineConstant(identifier.getLexeme());
         this.#emit(Opcode.DEF_VARIABLE, idx);
+      },
+      [TokenType.IMPORT]: () => {
+        const identifier = this.#expect(
+          TokenType.IDENTIFIER,
+          "expected module",
+        );
+
+        const modIdx = this.#defineConstant(identifier.getLexeme());
+        this.#emit(Opcode.IMPORT, modIdx);
       },
       [TokenType.ERROR]: () => {
         this.#throw(this.#token.getLexeme());
@@ -276,6 +338,20 @@ class Compiler {
     this.#emit(op);
   }
 
+  #binaryAssign(op) {
+    const identifier = this.#expect(
+      TokenType.IDENTIFIER,
+      "expected identifier",
+    );
+
+    const idx = this.#defineConstant(identifier.getLexeme());
+
+    this.#emit(Opcode.GET_VARIABLE, idx);
+    this.step();
+
+    this.#emit(op, Opcode.SET_VARIABLE, idx);
+  }
+
   #identifier() {
     const value = this.#token.getLexeme();
     const idx = this.#defineConstant(value);
@@ -339,6 +415,6 @@ class Compiler {
   #throw(msg) {
     const line = this.#token.getLine();
     const char = this.#token.getChar();
-    throw new Error(`${line}:${char}:${msg}`);
+    throw new Error(`at ${line}:${char}: ${msg}`);
   }
 }

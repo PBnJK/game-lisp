@@ -23,6 +23,8 @@ function valueTypeToString(type) {
       return "bool";
     case ValueType.NUMBER:
       return "number";
+    case ValueType.STRING:
+      return "string";
     case ValueType.FUNCTION:
       return "function";
     case ValueType.NATIVE_FUNCTION:
@@ -93,7 +95,7 @@ class Value {
       return equal;
     }
 
-    return equal.negate();
+    return equal.not();
   }
 
   lt(rhs) {
@@ -106,7 +108,7 @@ class Value {
       return less;
     }
 
-    return less.negate();
+    return less.not();
   }
 
   gt(rhs) {
@@ -119,7 +121,7 @@ class Value {
       return greater;
     }
 
-    return greater.negate();
+    return greater.not();
   }
 
   is(rhs) {
@@ -132,6 +134,10 @@ class Value {
 
   call() {
     return new ErrorValue(`cannot call ${this}`);
+  }
+
+  dot(rhs) {
+    return new ErrorValue(`cannot acces ${this}.${rhs}`);
   }
 
   getType() {
@@ -164,7 +170,7 @@ class BoolValue extends Value {
       return new BoolValue(this.getValue() == rhs.getValue());
     }
 
-    super.eq(rhs);
+    return super.eq(rhs);
   }
 
   toString() {
@@ -189,7 +195,7 @@ class NumberValue extends Value {
       return new NumberValue(this.getValue() + rhs.getValue());
     }
 
-    super.add(rhs);
+    return super.add(rhs);
   }
 
   sub(rhs) {
@@ -197,7 +203,7 @@ class NumberValue extends Value {
       return new NumberValue(this.getValue() - rhs.getValue());
     }
 
-    super.sub(rhs);
+    return super.sub(rhs);
   }
 
   mul(rhs) {
@@ -213,7 +219,7 @@ class NumberValue extends Value {
         return new StringValue(rhsValue.repeat(value));
     }
 
-    super.mul(rhs);
+    return super.mul(rhs);
   }
 
   div(rhs) {
@@ -226,7 +232,7 @@ class NumberValue extends Value {
       return new NumberValue(this.getValue() / rhsValue);
     }
 
-    super.div(rhs);
+    return super.div(rhs);
   }
 
   mod(rhs) {
@@ -235,7 +241,7 @@ class NumberValue extends Value {
       return new NumberValue(this.getValue() % rhsValue);
     }
 
-    super.mod(rhs);
+    return super.mod(rhs);
   }
 
   negate() {
@@ -247,7 +253,7 @@ class NumberValue extends Value {
       return new BoolValue(this.getValue() === rhs.getValue());
     }
 
-    super.eq(rhs);
+    return super.eq(rhs);
   }
 
   lt(rhs) {
@@ -255,7 +261,7 @@ class NumberValue extends Value {
       return new BoolValue(this.getValue() < rhs.getValue());
     }
 
-    super.lt(rhs);
+    return super.lt(rhs);
   }
 
   gt(rhs) {
@@ -263,7 +269,7 @@ class NumberValue extends Value {
       return new BoolValue(this.getValue() > rhs.getValue());
     }
 
-    super.gt(rhs);
+    return super.gt(rhs);
   }
 
   toString() {
@@ -285,10 +291,10 @@ class StringValue extends Value {
 
   add(rhs) {
     if (rhs.getType() === ValueType.STRING) {
-      return new NumberValue(this.getValue() + rhs.getValue());
+      return new StringValue(this.getValue() + rhs.getValue());
     }
 
-    super.add(rhs);
+    return super.add(rhs);
   }
 
   eq(rhs) {
@@ -296,7 +302,7 @@ class StringValue extends Value {
       return new BoolValue(this.getValue() === rhs.getValue());
     }
 
-    super.eq(rhs);
+    return super.eq(rhs);
   }
 
   lt(rhs) {
@@ -304,7 +310,7 @@ class StringValue extends Value {
       return new BoolValue(this.getValue() < rhs.getValue());
     }
 
-    super.lt(rhs);
+    return super.lt(rhs);
   }
 
   gt(rhs) {
@@ -312,7 +318,22 @@ class StringValue extends Value {
       return new BoolValue(this.getValue() > rhs.getValue());
     }
 
-    super.gt(rhs);
+    return super.gt(rhs);
+  }
+
+  dot(rhs) {
+    if (rhs.getType() === ValueType.NUMBER) {
+      const str = this.getValue();
+      const index = rhs.getValue();
+
+      if (index >= str.length) {
+        return new ErrorValue(`"${this}".${index} is out of bounds`);
+      }
+
+      return new StringValue(str[index]);
+    }
+
+    return super.dot(rhs);
   }
 
   toString() {
@@ -400,6 +421,26 @@ class NativeFunctionValue extends Value {
   }
 }
 
+class ArrayValue extends Value {
+  #value = [];
+
+  constructor(value) {
+    this.#value = value;
+  }
+
+  getValue() {
+    return this.#value;
+  }
+
+  dot(rhs) {
+    if (rhs.getType() === ValueType.NUMBER) {
+      return this.getValue()[rhs.getValue()];
+    }
+
+    return super.dot(rhs);
+  }
+}
+
 class TypeValue extends Value {
   #value = ValueType.NONE;
   #caster = () => {};
@@ -434,7 +475,7 @@ class TypeValue extends Value {
 }
 
 class ErrorValue extends Value {
-  #value = () => {};
+  #value = null;
 
   constructor(value) {
     super(ValueType.ERROR);
@@ -442,7 +483,7 @@ class ErrorValue extends Value {
   }
 
   getValue() {
-    return this.#value;
+    throw new Error(this.#value);
   }
 
   toString() {

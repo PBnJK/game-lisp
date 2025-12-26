@@ -4,6 +4,7 @@
 
 const codeEditor = document.getElementById("editor-code-editor");
 
+const canvas = document.getElementById("runner-canvas");
 const runnerPlayPauseIcon = document.getElementById("runner-play-pause-icon");
 const runnerConsole = document.getElementById("runner-console");
 
@@ -12,6 +13,9 @@ const vm = new VM();
 let cachedHash = null;
 
 function main() {
+  const lib = createLibrary(canvas);
+  vm.addLibrary("game", lib);
+
   const runnerStep = document.getElementById("runner-step-button");
   runnerStep.addEventListener("click", (e) => {
     vm.step();

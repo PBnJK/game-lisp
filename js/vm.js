@@ -20,6 +20,7 @@ class VM {
   #fp = 0;
 
   #constants = [];
+  #libraries = {};
   #envs = [];
   #stack = [];
 
@@ -28,6 +29,10 @@ class VM {
   constructor() {
     this.#initHandlers();
     this.#initGlobalEnv();
+  }
+
+  addLibrary(modName, mod) {
+    this.#libraries[modName] = mod;
   }
 
   load(source) {
@@ -65,13 +70,17 @@ class VM {
     switchToPauseIcon();
 
     this.setStatus(VMStatus.RUNNING);
-    this.#intervalID = setInterval(this.#step.bind(this));
+    this.#intervalID = setInterval(this.#multiStep.bind(this), 5);
+
+    printToConsole("Running VM...");
   }
 
   pause() {
     if (this.#intervalID !== -1) {
       clearInterval(this.#intervalID);
       this.#intervalID = -1;
+
+      printToConsole("VM paused!");
     }
 
     switchToPlayIcon();
@@ -82,6 +91,8 @@ class VM {
     if (this.#intervalID !== -1) {
       clearInterval(this.#intervalID);
       this.#intervalID = -1;
+
+      printToConsole("VM stopped!");
     }
 
     switchToPlayIcon();
@@ -147,68 +158,68 @@ class VM {
         this.#pop();
       },
       [Opcode.EQUAL]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.eq(b));
       },
       [Opcode.NOT_EQUAL]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.neq(b));
       },
       [Opcode.GREATER]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.gt(b));
       },
       [Opcode.GREATER_EQUAL]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.gteq(b));
       },
       [Opcode.LESS]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.lt(b));
       },
       [Opcode.LESS_EQUAL]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.lteq(b));
       },
       [Opcode.ADD]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.add(b));
       },
       [Opcode.SUB]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.sub(b));
       },
       [Opcode.MUL]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.mul(b));
       },
       [Opcode.DIV]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.div(b));
       },
       [Opcode.MOD]: () => {
-        const a = this.#pop();
         const b = this.#pop();
+        const a = this.#pop();
 
         this.#push(a.mod(b));
       },
@@ -225,8 +236,10 @@ class VM {
         this.#fp += offset;
       },
       [Opcode.JUMP_IF_FALSE]: () => {
-        const offset = this.#pop();
-        if (this.#peek().not()) {
+        const offset = this.#next();
+
+        const condition = this.#pop().not();
+        if (condition.getValue()) {
           this.#fp += offset;
         }
       },
@@ -241,13 +254,13 @@ class VM {
         const fn = this.#getIdentifier(identifier);
 
         if (fn.getType() === ValueType.NATIVE_FUNCTION) {
-          const args = [];
-          for (let i = 0; i < argCount; ++i) {
-            args.push(this.#pop());
+          const args = Array(argCount);
+          for (let i = argCount - 1; i >= 0; --i) {
+            args[i] = this.#pop();
           }
 
           const value = fn.getValue();
-          return value(args);
+          return value(...args);
         }
 
         if (fn.getArity() !== argCount) {
@@ -279,6 +292,20 @@ class VM {
 
         this.#fp = this.#pop();
         this.#popEnv();
+      },
+      [Opcode.DOT]: () => {
+        const b = this.#pop();
+        const a = this.#pop();
+
+        this.#push(a.dot(b));
+      },
+      [Opcode.IMPORT]: () => {
+        const modIdx = this.#next();
+        const modIdent = this.#constants[modIdx];
+        const mod = this.#libraries[modIdent];
+
+        const targetEnv = this.#envs[this.#envs.length - 1];
+        targetEnv.addFromEnv(mod);
       },
     };
 
@@ -345,11 +372,23 @@ class VM {
     this.#envs = [globalEnv];
   }
 
+  #multiStep() {
+    for (let i = 0; i < 80 && this.isRunning(); ++i) {
+      this.#step();
+    }
+  }
+
   #step() {
     const op = this.#next();
-
     const fn = this.#handlers[op];
-    fn();
+
+    try {
+      fn();
+    } catch (error) {
+      this.stop();
+      printToConsole(error);
+      console.log(error);
+    }
   }
 
   /* Peeks the top value in the stack */

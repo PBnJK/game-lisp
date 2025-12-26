@@ -9,8 +9,19 @@ class Env {
     this.#env = new Map();
   }
 
+  getEnv() {
+    return this.#env;
+  }
+
   addFromObject(kv) {
     for (const [k, v] of Object.entries(kv)) {
+      this.setIdentifier(k, v);
+    }
+  }
+
+  addFromEnv(env) {
+    const kv = env.getEnv();
+    for (const [k, v] of kv) {
       this.setIdentifier(k, v);
     }
   }
