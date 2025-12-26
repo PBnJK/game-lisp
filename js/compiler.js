@@ -263,13 +263,27 @@ class Compiler {
 
         /* Zero is temporary, will be patched later down */
         this.#emit(Opcode.JUMP_IF_FALSE, 0);
-        const fpPatch = this.#getFP();
+        const fpIfPatch = this.#getFP();
 
         this.#next();
         this.#block();
 
-        const fpCurrent = this.#getFP();
-        this.#opcodes[fpPatch] = fpCurrent - fpPatch;
+        const fpElse = this.#getFP();
+
+        if (this.#peek().getType() == TokenType.LPAREN) {
+          this.#opcodes[fpIfPatch] = fpElse - fpIfPatch + 2;
+
+          this.#emit(Opcode.JUMP, 0);
+          const fpElsePatch = this.#getFP();
+
+          this.#next();
+          this.#block();
+
+          const fpEnd = this.#getFP();
+          this.#opcodes[fpElsePatch] = fpEnd - fpElse - 2;
+        } else {
+          this.#opcodes[fpIfPatch] = fpElse - fpIfPatch + 2;
+        }
       },
       [TokenType.LET]: () => {
         const identifier = this.#expect(
