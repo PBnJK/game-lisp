@@ -31,10 +31,12 @@ class VM {
     this.#initGlobalEnv();
   }
 
+  /* Adds an importable library */
   addLibrary(modName, mod) {
     this.#libraries[modName] = mod;
   }
 
+  /* Loads source code */
   load(source) {
     this.stop();
 
@@ -50,6 +52,7 @@ class VM {
     this.#initGlobalEnv();
   }
 
+  /* Performs a step */
   step() {
     if (this.isStopped()) {
       return;
@@ -62,6 +65,7 @@ class VM {
     this.#step();
   }
 
+  /* Starts running the VM */
   run() {
     if (this.#intervalID !== -1) {
       this.stop();
@@ -75,6 +79,7 @@ class VM {
     printToConsole("Running VM...");
   }
 
+  /* Pauses the VM */
   pause() {
     if (this.#intervalID !== -1) {
       clearInterval(this.#intervalID);
@@ -87,6 +92,7 @@ class VM {
     this.setStatus(VMStatus.PAUSED);
   }
 
+  /* Stops running the VM */
   stop() {
     if (this.#intervalID !== -1) {
       clearInterval(this.#intervalID);
@@ -99,32 +105,40 @@ class VM {
     this.setStatus(VMStatus.STOPPED);
   }
 
+  /* Checks if the VM is running */
   isRunning() {
     return this.getStatus() === VMStatus.RUNNING;
   }
 
+  /* Checks if the VM is paused */
   isPaused() {
     return this.getStatus() === VMStatus.PAUSED;
   }
 
+  /* Checks if the VM is stopped */
   isStopped() {
     return this.getStatus() === VMStatus.STOPPED;
   }
 
+  /* Sets the current state of the VM (see VMStatus above) */
   setStatus(to) {
     this.#status = to;
   }
 
+  /* Returns the current state of the VM */
   getStatus() {
     return this.#status;
   }
 
+  /* Initializes the handlers table (table of functions that deal with opcodes) */
   #initHandlers() {
     this.#handlers = {
+      /* Pushes a constant to the stack */
       [Opcode.GET_CONST]: () => {
         const idx = this.#next();
         this.#push(this.#constants[idx]);
       },
+      /* Creates a new variable, its value is popped from the stack */
       [Opcode.DEF_VARIABLE]: () => {
         const idx = this.#next();
         const identifier = this.#constants[idx];
@@ -132,6 +146,7 @@ class VM {
         const value = this.#pop();
         this.#addIdentifier(identifier, value);
       },
+      /* Pushes the value of a variable to the stack */
       [Opcode.GET_VARIABLE]: () => {
         const idx = this.#next();
         const identifier = this.#constants[idx];
@@ -139,6 +154,7 @@ class VM {
         const value = this.#getIdentifier(identifier);
         this.#push(value);
       },
+      /* Sets the value of a variable to one popped from the stack */
       [Opcode.SET_VARIABLE]: () => {
         const idx = this.#next();
         const identifier = this.#constants[idx];
@@ -146,101 +162,156 @@ class VM {
         const value = this.#pop();
         this.#setIdentifier(identifier, value);
       },
+      /* Pushes a true boolean value to the stack */
       [Opcode.TRUE]: () => {
         const t = new BoolValue(true);
         this.#push(t);
       },
+      /* Pushes a false boolean value to the stack */
       [Opcode.FALSE]: () => {
         const f = new BoolValue(false);
         this.#push(f);
       },
+      /* Pops a value from the stack, discarding it */
       [Opcode.POP]: () => {
         this.#pop();
       },
+      /* Pops two values from the stack and compares them for equality
+       * The result is pushed to the stack
+       */
       [Opcode.EQUAL]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.eq(b));
       },
+      /* Pops two values from the stack and compares them for inequality
+       * The result is pushed to the stack
+       */
       [Opcode.NOT_EQUAL]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.neq(b));
       },
+      /* Pops two values from the stack and checks if one is greater than the
+       * other
+       *
+       * The result is pushed to the stack
+       */
       [Opcode.GREATER]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.gt(b));
       },
+      /* Pops two values from the stack and checks if one is greater than or
+       * equal to the other
+       *
+       * The result is pushed to the stack
+       */
       [Opcode.GREATER_EQUAL]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.gteq(b));
       },
+      /* Pops two values from the stack and checks if one is less than the other
+       * The result is pushed to the stack
+       */
       [Opcode.LESS]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.lt(b));
       },
+      /* Pops two values from the stack and checks if one is less than or equal
+       * to the other
+       *
+       * The result is pushed to the stack
+       */
       [Opcode.LESS_EQUAL]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.lteq(b));
       },
+      /* Pops two values from the stack and adds them together
+       * The result is pushed to the stack
+       */
       [Opcode.ADD]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.add(b));
       },
+      /* Pops two values from the stack and subtracts one from the other
+       * The result is pushed to the stack
+       */
       [Opcode.SUB]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.sub(b));
       },
+      /* Pops two values from the stack and multiplies them
+       * The result is pushed to the stack
+       */
       [Opcode.MUL]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.mul(b));
       },
+      /* Pops two values from the stack and divides one by the other
+       * The result is pushed to the stack
+       */
       [Opcode.DIV]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.div(b));
       },
+      /* Pops two values from the stack and floor-divides one by the other
+       * The result is pushed to the stack
+       */
       [Opcode.FLOOR_DIV]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.fdiv(b));
       },
+      /* Pops two values from the stack and gets the module of one by the other
+       * The result is pushed to the stack
+       */
       [Opcode.MOD]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.mod(b));
       },
+      /* Pops a value from the stack and negates it (-VALUE)
+       * The result is pushed to the stack
+       */
       [Opcode.NEGATE]: () => {
         const a = this.#pop();
         this.#push(a.negate());
       },
+      /* Pops a value from the stack and NOTs them (!VALUE)
+       * The result is pushed to the stack
+       */
       [Opcode.NOT]: () => {
         const a = this.#pop();
         this.#push(a.not());
       },
+      /* Moves the program counter by a signed offset (forwards or backwards) */
       [Opcode.JUMP]: () => {
         const offset = this.#next();
         this.#fp += offset;
       },
+      /* Moves the program counter by a signed offset (forwards or backwards)
+       * if the value at the top of the stack is false
+       */
       [Opcode.JUMP_IF_FALSE]: () => {
         const offset = this.#next();
 
@@ -249,9 +320,16 @@ class VM {
           this.#fp += offset;
         }
       },
+      /* Duplicates the value at the top of the stack */
       [Opcode.DUP]: () => {
         this.#push(this.#peek());
       },
+      /* Calls a function
+       *   ARG 1: number of function arguments
+       *   ARG 2: function name (index of constant with function name)
+       *
+       * Arguments are popped from the stack
+       */
       [Opcode.CALL]: () => {
         const argCount = this.#next();
 
@@ -259,16 +337,18 @@ class VM {
         const identifier = this.#constants[idx];
         const fn = this.#getIdentifier(identifier);
 
+        /* Since native functions don't run in the VM, we treat them as a special case */
         if (fn.getType() === ValueType.NATIVE_FUNCTION) {
-          const args = Array(argCount);
-          for (let i = argCount - 1; i >= 0; --i) {
-            args[i] = this.#pop();
+          const args = [];
+          for (let i = 0; i < argCount; ++i) {
+            args.push(this.#pop());
           }
 
           const value = fn.getValue();
           return value(...args);
         }
 
+        /* Check if arguments match */
         if (fn.getArity() !== argCount) {
           return;
         }
@@ -276,7 +356,7 @@ class VM {
         const localEnv = new Env();
 
         const args = fn.getArgs();
-        for (let i = args.length - 1; i >= 0; --i) {
+        for (let i = 0; i < args.length; ++i) {
           const arg = args[i];
           const value = this.#pop();
           localEnv.setIdentifier(arg, value);
@@ -287,6 +367,9 @@ class VM {
         const frame = fn.getValue();
         this.#pushFrame(frame);
       },
+      /* Returns from a function
+       * Outside of functions, ends the program
+       */
       [Opcode.RETURN]: () => {
         if (this.#frameIdx === 0) {
           this.stop();
@@ -299,18 +382,25 @@ class VM {
         this.#fp = this.#pop();
         this.#popEnv();
       },
+      /* Accesses a member/index B of A, both popped from the stack
+       * The result is pushed to the stack
+       */
       [Opcode.DOT]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.dot(b));
       },
+      /* Pops two values from the stack and check if A is of type B
+       * The result is pushed to the stack
+       */
       [Opcode.IS]: () => {
         const b = this.#pop();
         const a = this.#pop();
 
         this.#push(a.is(b));
       },
+      /* Imports a module/library/whatever */
       [Opcode.IMPORT]: () => {
         const modIdx = this.#next();
         const modIdent = this.#constants[modIdx];
@@ -326,6 +416,9 @@ class VM {
     });
   }
 
+  /* Initializes the global environment
+   * It contains all the global functions and variables accessible to the user
+   */
   #initGlobalEnv() {
     const globalEnv = new Env();
 
@@ -384,17 +477,25 @@ class VM {
     this.#envs = [globalEnv];
   }
 
+  /* Performs a bunch of steps at once
+   *
+   * TODO: figure out what's a reasonable number to use here. Should allow for
+   * fast code execution, but also without slowing down the browser...
+   * This function is called every 5ms, so it should also not run for longer
+   * than that
+   */
   #multiStep() {
     for (let i = 0; i < 80 && this.isRunning(); ++i) {
       this.#step();
     }
   }
 
+  /* Executes a step (fetches op, runs it) */
   #step() {
     const op = this.#next();
-    const fn = this.#handlers[op];
 
     try {
+      const fn = this.#handlers[op];
       fn();
     } catch (error) {
       this.stop();
@@ -497,6 +598,7 @@ class VM {
     return -1;
   }
 
+  /* Fetches the next op */
   #next() {
     return this.#frames[this.#frameIdx][this.#fp++];
   }

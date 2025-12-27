@@ -89,17 +89,12 @@ class Value {
     return new ErrorValue(`cannot perform !${this}`);
   }
 
-  eq(rhs) {
-    return new ErrorValue(`cannot perform ${this} == ${rhs}`);
+  eq(_) {
+    return new BoolValue(false);
   }
 
   neq(rhs) {
-    const equal = this.eq(rhs);
-    if (equal.getType() === ValueType.ERROR) {
-      return equal;
-    }
-
-    return equal.not();
+    return this.eq(rhs).not();
   }
 
   lt(rhs) {
