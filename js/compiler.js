@@ -30,23 +30,24 @@ const Opcode = {
   SUB: 14,
   MUL: 15,
   DIV: 16,
-  MOD: 17,
+  FLOOR_DIV: 17,
+  MOD: 18,
 
-  NEGATE: 18,
-  NOT: 19,
+  NEGATE: 19,
+  NOT: 20,
 
-  JUMP: 20,
-  JUMP_IF_FALSE: 21,
+  JUMP: 21,
+  JUMP_IF_FALSE: 22,
 
-  DUP: 22,
+  DUP: 23,
 
-  CALL: 23,
-  RETURN: 24,
+  CALL: 24,
+  RETURN: 25,
 
-  DOT: 25,
-  IS: 26,
+  DOT: 26,
+  IS: 27,
 
-  IMPORT: 27,
+  IMPORT: 28,
 };
 
 /* Compiler
@@ -77,11 +78,16 @@ class Compiler {
 
     while (true) {
       this.#next();
+
+      /* Log errors */
       if (this.#token.isError()) {
-        printToConsole(this.#token.toString());
+        const msg = this.#token.toString();
+        printToConsole(msg);
+        console.log(msg);
         break;
       }
 
+      /* Stop when we reach the end of the file */
       if (this.#peek().isEOF()) {
         break;
       }
@@ -95,6 +101,12 @@ class Compiler {
       }
     }
 
+    /* This final return is special, and tells the VM to end the program
+     *
+     * BUG: If you use the return keyword outside of a function, the VM also gladly
+     * ends the program rather than, I guess, throwing an error, which sounds bad,
+     * but is also goofy enough that I might just leave it in...
+     */
     this.#emit(Opcode.RETURN);
 
     printToConsole("Finished compiling!");
@@ -165,6 +177,14 @@ class Compiler {
       /* (/= VAR SEXPR) */
       [TokenType.SLASH_EQUAL]: () => {
         this.#binaryAssign(Opcode.DIV);
+      },
+      /* (// SEXPR SEXPR) */
+      [TokenType.SLASH_SLASH]: () => {
+        this.#binary(Opcode.FLOOR_DIV);
+      },
+      /* (//= VAR SEXPR) */
+      [TokenType.SLASH_SLASH_EQUAL]: () => {
+        this.#binaryAssign(Opcode.FLOOR_DIV);
       },
       /* (% SEXPR SEXPR) */
       [TokenType.PERCENT]: () => {

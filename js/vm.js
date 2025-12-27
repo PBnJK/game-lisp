@@ -217,6 +217,12 @@ class VM {
 
         this.#push(a.div(b));
       },
+      [Opcode.FLOOR_DIV]: () => {
+        const b = this.#pop();
+        const a = this.#pop();
+
+        this.#push(a.fdiv(b));
+      },
       [Opcode.MOD]: () => {
         const b = this.#pop();
         const a = this.#pop();

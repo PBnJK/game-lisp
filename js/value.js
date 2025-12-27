@@ -73,6 +73,10 @@ class Value {
     return new ErrorValue(`cannot perform ${this} / ${rhs}`);
   }
 
+  fdiv(rhs) {
+    return new ErrorValue(`cannot perform ${this} // ${rhs}`);
+  }
+
   mod(rhs) {
     return new ErrorValue(`cannot perform ${this} % ${rhs}`);
   }
@@ -230,6 +234,20 @@ class NumberValue extends Value {
       }
 
       return new NumberValue(this.getValue() / rhsValue);
+    }
+
+    return super.div(rhs);
+  }
+
+  fdiv(rhs) {
+    const rhsValue = rhs.getValue();
+    if (rhs.getType() === ValueType.NUMBER) {
+      if (rhsValue === 0) {
+        return new ErrorValue("division by zero");
+      }
+
+      const result = Math.floor(this.getValue() / rhsValue);
+      return new NumberValue(result);
     }
 
     return super.div(rhs);
