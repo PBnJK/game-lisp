@@ -148,11 +148,11 @@ class VM {
       },
       [Opcode.TRUE]: () => {
         const t = new BoolValue(true);
-        this.#push(this.#constants[t]);
+        this.#push(t);
       },
       [Opcode.FALSE]: () => {
         const f = new BoolValue(false);
-        this.#push(this.#constants[f]);
+        this.#push(f);
       },
       [Opcode.POP]: () => {
         this.#pop();
