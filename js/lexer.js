@@ -183,11 +183,11 @@ class Lexer {
 
     const char = this.#advance();
 
-    if (this.#isAlpha(char)) {
+    if (this.#isAlpha(char) || char == "_") {
       return this.#lexIdentifier();
     }
 
-    if (this.#isDigit(char)) {
+    if (this.#isDigit(char) || (char == "-" && this.#isDigit(this.#peek()))) {
       return this.#lexNumber(char);
     }
 
@@ -383,22 +383,36 @@ class Lexer {
 
   /* Lexes a number */
   #lexNumber(char) {
+    let power;
+    let number;
+
+    if (char === "-") {
+      char = this.#advance();
+      power = -1;
+    } else {
+      power = 1;
+    }
+
     if (char === "0") {
       const radix = this.#advance();
       switch (radix) {
         case "x":
-          return this.#readHexNumber();
+          number = this.#readHexNumber() * power;
         case "o":
-          return this.#readOctalNumber();
+          number = this.#readOctalNumber() * power;
         case "b":
-          return this.#readBinaryNumber();
+          number = this.#readBinaryNumber() * power;
+        default:
+          this.#rewind();
+          this.#rewind();
+          number = this.#readDecimalNumber() * power;
       }
-
+    } else {
       this.#rewind();
+      number = this.#readDecimalNumber() * power;
     }
 
-    this.#rewind();
-    return this.#readDecimalNumber();
+    return this.createToken(TokenType.NUMBER, number);
   }
 
   /* Reads a hexadecimal number (0-F) */
@@ -413,7 +427,7 @@ class Lexer {
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return this.createToken(TokenType.NUMBER, parseInt(num, 16));
+    return parseInt(num, 16);
   }
 
   /* Reads an octal number (0-7) */
@@ -428,7 +442,7 @@ class Lexer {
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return this.createToken(TokenType.NUMBER, parseInt(num, 8));
+    return parseInt(num, 8);
   }
 
   /* Reads a binary number (0/1) */
@@ -443,7 +457,7 @@ class Lexer {
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return this.createToken(TokenType.NUMBER, parseInt(num, 2));
+    return parseInt(num, 2);
   }
 
   /* Reads a decimal number (0-9) */
@@ -465,7 +479,7 @@ class Lexer {
     }
 
     const num = this.#source.substring(start, this.#idx);
-    return this.createToken(TokenType.NUMBER, parseFloat(num));
+    return parseFloat(num);
   }
 
   /* Lexes a string wrapped in quotes */

@@ -4,6 +4,21 @@
 
 "use strict";
 
+const KERNEL = `
+(while true (
+  (if (__needs_update) (
+    (update)
+  ))
+  (if (__needs_draw) (
+    (clear)
+    (draw)
+  ))
+))
+`;
+
+const UPDATE_INTERVAL = 2;
+const DRAW_INTERVAL = 1000.0 / 60.0;
+
 const VMStatus = {
   STOPPED: 0,
   PAUSED: 1,
@@ -11,13 +26,17 @@ const VMStatus = {
 };
 
 class VM {
-  #intervalID = -1;
+  #updateIntervalID = -1;
+  #drawIntervalID = -1;
 
   #status = VMStatus.STOPPED;
 
   #frames = [];
   #frameIdx = 0;
   #fp = 0;
+
+  #needsUpdate = true;
+  #needsDraw = true;
 
   #constants = [];
   #libraries = {};
@@ -40,11 +59,12 @@ class VM {
   load(source) {
     this.stop();
 
+    source += KERNEL;
+
     const compiler = new Compiler(source);
     compiler.compile();
 
     this.#frames = [compiler.getOpcodes()];
-    console.log(`${this.#frames[0]}`);
     this.#frameIdx = 0;
     this.#fp = 0;
 
@@ -68,26 +88,28 @@ class VM {
 
   /* Starts running the VM */
   run() {
-    if (this.#intervalID !== -1) {
+    if (this.#updateIntervalID !== -1) {
       this.stop();
     }
 
     switchToPauseIcon();
 
     this.setStatus(VMStatus.RUNNING);
-    this.#intervalID = setInterval(this.#multiStep.bind(this), 5);
+    this.#updateIntervalID = setInterval(
+      this.#multiStep.bind(this),
+      UPDATE_INTERVAL,
+    );
+    this.#drawIntervalID = setInterval(() => {
+      this.#needsDraw = true;
+    }, DRAW_INTERVAL);
 
     printToConsole("Running VM...");
   }
 
   /* Pauses the VM */
   pause() {
-    if (this.#intervalID !== -1) {
-      clearInterval(this.#intervalID);
-      this.#intervalID = -1;
-
-      printToConsole("VM paused!");
-    }
+    printToConsole("VM paused!");
+    this.#stopIntervals();
 
     switchToPlayIcon();
     this.setStatus(VMStatus.PAUSED);
@@ -95,12 +117,8 @@ class VM {
 
   /* Stops running the VM */
   stop() {
-    if (this.#intervalID !== -1) {
-      clearInterval(this.#intervalID);
-      this.#intervalID = -1;
-
-      printToConsole("VM stopped!");
-    }
+    printToConsole("VM stopped!");
+    this.#stopIntervals();
 
     switchToPlayIcon();
     this.setStatus(VMStatus.STOPPED);
@@ -501,26 +519,54 @@ class VM {
 
     /* Functions */
     globalEnv.addFromObject({
+      __needs_update: new NativeFunctionValue(() => {
+        if (this.#needsUpdate === true) {
+          this.#needsUpdate = false;
+          return new BoolValue(true);
+        }
+
+        return new BoolValue(false);
+      }, 0),
+      __needs_draw: new NativeFunctionValue(() => {
+        if (this.#needsDraw === true) {
+          this.#needsDraw = false;
+          return new BoolValue(true);
+        }
+
+        return new BoolValue(false);
+      }, 0),
       print: new NativeFunctionValue((...args) => {
         const str = args.join(" ");
 
         printToConsole(str);
-        return new StringValue(str);
       }, -1),
     });
 
     this.#envs = [globalEnv];
   }
 
+  #stopIntervals() {
+    if (this.#updateIntervalID !== -1) {
+      clearInterval(this.#updateIntervalID);
+      this.#updateIntervalID = -1;
+    }
+
+    if (this.#drawIntervalID !== -1) {
+      clearInterval(this.#drawIntervalID);
+      this.#drawIntervalID = -1;
+    }
+  }
+
   /* Performs a bunch of steps at once
    *
    * TODO: figure out what's a reasonable number to use here. Should allow for
    * fast code execution, but also without slowing down the browser...
-   * This function is called every 5ms, so it should also not run for longer
-   * than that
+   * This function is called every UPDATE_INTERVAL ms, so it should also not
+   * run for longer than that
    */
   #multiStep() {
-    for (let i = 0; i < 128 && this.isRunning(); ++i) {
+    this.#needsUpdate = true;
+    for (let i = 0; i < 160 && this.isRunning(); ++i) {
       this.#step();
     }
   }
@@ -529,9 +575,9 @@ class VM {
   #step() {
     const op = this.#next();
 
-    console.log(this.#fp - 1, op);
     try {
       const fn = this.#handlers[op];
+      console.log(op, fn);
       fn();
     } catch (error) {
       this.stop();

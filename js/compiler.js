@@ -37,21 +37,21 @@ const Opcode = {
   AND: 20,
   OR: 21,
 
-  NEGATE: 21,
-  NOT: 22,
+  NEGATE: 22,
+  NOT: 23,
 
-  JUMP: 23,
-  JUMP_IF_FALSE: 24,
+  JUMP: 24,
+  JUMP_IF_FALSE: 25,
 
-  DUP: 25,
+  DUP: 26,
 
-  CALL: 26,
-  RETURN: 27,
+  CALL: 27,
+  RETURN: 28,
 
-  DOT: 28,
-  IS: 29,
+  DOT: 29,
+  IS: 30,
 
-  IMPORT: 30,
+  IMPORT: 31,
 };
 
 /* Compiler
@@ -316,7 +316,7 @@ class Compiler {
          * be called. Since it's FILO, this ensures they will be in the correct
          * order when we pop them off the stack
          */
-        args = args.reverse();
+        args.reverse();
 
         /* ...end of arguments list */
         this.#expect(TokenType.RPAREN, "expected closing parenthesis ')'");
