@@ -1,34 +1,34 @@
 (import game)
 
 (let x_ball 320)
-(let x_ball_speed -0.5)
+(let x_ball_speed -1)
 
 (let y_ball 240)
-(let y_ball_speed 0.5)
+(let y_ball_speed 1)
 
 (let y_enemy 200)
 (let y_player 200)
 
 (fun update () (
   (if (and (> y_player 0) (is_key_pressed "KeyW")) (
-    (-= y_player 0.5)
-    (-= y_enemy 0.5)
+    (-= y_player 1)
+    (-= y_enemy 1)
   ))
   (if (and (< y_player 416) (is_key_pressed "KeyS")) (
-    (+= y_player 0.5)
-    (+= y_enemy 0.5)
+    (+= y_player 1)
+    (+= y_enemy 1)
   ))
 
   (if (or (> y_ball 468) (< y_ball 0)) (
     (= y_ball_speed (- y_ball_speed))
   ))
 
-  (if (and (<= x_ball 48) (and (>= y_ball y_player) (<= y_ball (+ y_player 16)))) (
-    (= x_ball_speed 0.5)
+  (if (and (< x_ball 48) (and (> y_ball y_player) (< y_ball (+ y_player 16)))) (
+    (= x_ball_speed 1)
   ))
 
-  (if (and (>= x_ball 564) (and (>= y_ball y_enemy) (<= y_ball (+ y_enemy 16)))) (
-    (= x_ball_speed -0.5)
+  (if (and (> x_ball 560) (and (> y_ball y_enemy) (< y_ball (+ y_enemy 16)))) (
+    (= x_ball_speed -1)
   ))
 
   (+= x_ball x_ball_speed)
