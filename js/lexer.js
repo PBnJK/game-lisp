@@ -330,6 +330,8 @@ class Lexer {
 
     const identifier = this.#readIdentifier();
     switch (identifier) {
+      case "not":
+        return this.createToken(TokenType.BANG, identifier);
       case "is":
         return this.createToken(TokenType.IS, identifier);
       case "and":

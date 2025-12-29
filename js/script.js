@@ -17,24 +17,26 @@ function main() {
   vm.addLibrary("game", lib);
 
   const runnerStep = document.getElementById("runner-step-button");
-  runnerStep.addEventListener("click", (e) => {
+  runnerStep.addEventListener("click", () => {
     vm.step();
     switchToPlayIcon();
   });
 
   const runnerPlayPause = document.getElementById("runner-play-pause-button");
-  runnerPlayPause.addEventListener("click", (e) => {
+  runnerPlayPause.addEventListener("click", () => {
     if (vm.isRunning()) {
       vm.pause();
     } else {
       loadIfNeeded();
       vm.run();
       switchToPauseIcon();
+
+      canvas.focus();
     }
   });
 
   const runnerStop = document.getElementById("runner-stop-button");
-  runnerStop.addEventListener("click", (e) => {
+  runnerStop.addEventListener("click", () => {
     vm.stop();
     switchToPlayIcon();
   });

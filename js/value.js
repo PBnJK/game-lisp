@@ -136,7 +136,11 @@ class Value {
   }
 
   dot(rhs) {
-    return new ErrorValue(`cannot acces ${this}.${rhs}`);
+    return new ErrorValue(`cannot access ${this}.${rhs}`);
+  }
+
+  truthy() {
+    return new ErrorValue(`cannot determine truthy-ness of ${this}`);
   }
 
   getType() {
@@ -170,6 +174,10 @@ class BoolValue extends Value {
     }
 
     return super.eq(rhs);
+  }
+
+  truthy() {
+    return this;
   }
 
   toString() {
@@ -285,6 +293,10 @@ class NumberValue extends Value {
     return super.gt(rhs);
   }
 
+  truthy() {
+    return new BoolValue(this.getValue() !== 0);
+  }
+
   toString() {
     return this.getValue().toString(10);
   }
@@ -347,6 +359,10 @@ class StringValue extends Value {
     }
 
     return super.dot(rhs);
+  }
+
+  truthy() {
+    return new BoolValue(this.getValue().length !== 0);
   }
 
   toString() {
@@ -451,6 +467,32 @@ class ArrayValue extends Value {
     }
 
     return super.dot(rhs);
+  }
+}
+
+class DictValue extends Value {
+  #value = [];
+
+  constructor(value) {
+    this.#value = value;
+  }
+
+  getValue() {
+    return this.#value;
+  }
+
+  dot(rhs) {
+    return this.getValue()[rhs.getValue()];
+  }
+}
+
+class UndefinedValue extends Value {
+  getValue() {
+    throw new Error("can't get undefined value");
+  }
+
+  truthy() {
+    return new BoolValue(false);
   }
 }
 

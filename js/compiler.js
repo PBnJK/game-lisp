@@ -16,38 +16,42 @@ const Opcode = {
 
   TRUE: 4,
   FALSE: 5,
+  UNDEFINED: 6,
 
-  POP: 6,
+  POP: 7,
 
-  EQUAL: 7,
-  NOT_EQUAL: 8,
-  GREATER: 9,
-  GREATER_EQUAL: 10,
-  LESS: 11,
-  LESS_EQUAL: 12,
+  EQUAL: 8,
+  NOT_EQUAL: 9,
+  GREATER: 10,
+  GREATER_EQUAL: 11,
+  LESS: 12,
+  LESS_EQUAL: 13,
 
-  ADD: 13,
-  SUB: 14,
-  MUL: 15,
-  DIV: 16,
-  FLOOR_DIV: 17,
-  MOD: 18,
+  ADD: 14,
+  SUB: 15,
+  MUL: 16,
+  DIV: 17,
+  FLOOR_DIV: 18,
+  MOD: 19,
 
-  NEGATE: 19,
-  NOT: 20,
+  AND: 20,
+  OR: 21,
 
-  JUMP: 21,
-  JUMP_IF_FALSE: 22,
+  NEGATE: 21,
+  NOT: 22,
 
-  DUP: 23,
+  JUMP: 23,
+  JUMP_IF_FALSE: 24,
 
-  CALL: 24,
-  RETURN: 25,
+  DUP: 25,
 
-  DOT: 26,
-  IS: 27,
+  CALL: 26,
+  RETURN: 27,
 
-  IMPORT: 28,
+  DOT: 28,
+  IS: 29,
+
+  IMPORT: 30,
 };
 
 /* Compiler
@@ -260,6 +264,14 @@ class Compiler {
 
         this.#emit(Opcode.CALL, argCount, idx);
       },
+      /* (or SEXPR SEXPR) */
+      [TokenType.OR]: () => {
+        this.#binary(Opcode.OR);
+      },
+      /* (and SEXPR SEXPR) */
+      [TokenType.AND]: () => {
+        this.#binary(Opcode.AND);
+      },
       /* (while CONDITION-SEXPR BLOCK) */
       [TokenType.WHILE]: () => {
         const fpCondition = this.#getFP();
@@ -304,7 +316,7 @@ class Compiler {
          * be called. Since it's FILO, this ensures they will be in the correct
          * order when we pop them off the stack
          */
-        args.reverse();
+        args = args.reverse();
 
         /* ...end of arguments list */
         this.#expect(TokenType.RPAREN, "expected closing parenthesis ')'");
@@ -318,12 +330,11 @@ class Compiler {
         const code = this.#opcodes.slice(fp);
         this.#opcodes.splice(fp);
 
-        /* Always return at the end
-         *
-         * WARN: Maybe bad, since whatever's on the stack will be treated as
-         * the return value? Maybe a separate stack...?
-         */
-        code.push(Opcode.RETURN);
+        /* Always return at the end */
+        if (code[code.length - 1] !== Opcode.RETURN) {
+          code.push(Opcode.UNDEFINED);
+          code.push(Opcode.RETURN);
+        }
 
         /* Create function, save it, and emit code! */
         const fn = new FunctionValue(name, args, code);
@@ -331,6 +342,15 @@ class Compiler {
         const nameIdx = this.#defineConstant(name);
 
         this.#emit(Opcode.GET_CONST, fnIdx, Opcode.DEF_VARIABLE, nameIdx);
+      },
+      /* (return [SEXPR]) */
+      [TokenType.RETURN]: () => {
+        if (this.#peek().getType() !== TokenType.RPAREN) {
+          this.step();
+          this.#emit(Opcode.RETURN);
+        } else {
+          this.#emit(Opcode.UNDEFINED, Opcode.RETURN);
+        }
       },
       /* (if CONDITION-SEXPR TRUE-BLOCK [ELSE-BLOCK]) */
       [TokenType.IF]: () => {
@@ -346,10 +366,12 @@ class Compiler {
         this.#block();
 
         const fpElse = this.#getFP();
-        this.#opcodes[fpIfPatch] = fpElse - fpIfPatch + 2;
+        this.#opcodes[fpIfPatch] = fpElse - fpIfPatch;
 
         /* Check for an "else" */
         if (this.#peek().getType() == TokenType.LPAREN) {
+          this.#opcodes[fpIfPatch] += 2;
+
           /* Zero is temporary, will be patched later down */
           this.#emit(Opcode.JUMP, 0);
           const fpElsePatch = this.#getFP();

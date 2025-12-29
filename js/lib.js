@@ -10,9 +10,19 @@
  * function *createLibrary* below) which is exposed to the user
  */
 class GameLib {
+  #keys = {};
+
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
+
+    window.addEventListener("keydown", (e) => {
+      this.#keys[e.code] = true;
+    });
+
+    window.addEventListener("keyup", (e) => {
+      this.#keys[e.code] = false;
+    });
   }
 
   /* @fn fill_color
@@ -31,7 +41,7 @@ class GameLib {
    *
    * @param css: string = CSS color string
    */
-  fillColor(css) {
+  fillColorCss(css) {
     this.ctx.fillStyle = css.getValue();
   }
 
@@ -47,11 +57,34 @@ class GameLib {
     this.ctx.fillRect(x.getValue(), y.getValue(), w.getValue(), h.getValue());
   }
 
+  /* @fn draw_text
+   * Draws text
+   *
+   * @param x: number = X position of the text
+   * @param y: number = Y position of the text
+   * @param text: str = Text to be drawn
+   *
+   * TODO: implement
+   */
+  drawText(x, y, text) {
+    this.ctx.fillRect(x.getValue(), y.getValue(), 2, 2);
+  }
+
   /* @fn clear
    * Clears the canvas
    */
   clear() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
+
+  /* @fn is_key_pressed
+   * Checks if a key is pressed
+   *
+   * @param key: string = Key being checked
+   * @return bool
+   */
+  isKeyPressed(key) {
+    return new BoolValue(this.#keys[key] === true);
   }
 }
 

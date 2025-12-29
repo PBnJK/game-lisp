@@ -44,6 +44,7 @@ class VM {
     compiler.compile();
 
     this.#frames = [compiler.getOpcodes()];
+    console.log(`${this.#frames[0]}`);
     this.#frameIdx = 0;
     this.#fp = 0;
 
@@ -172,6 +173,11 @@ class VM {
         const f = new BoolValue(false);
         this.#push(f);
       },
+      /* Pushes an undefined value to the stack */
+      [Opcode.UNDEFINED]: () => {
+        const u = new UndefinedValue();
+        this.#push(u);
+      },
       /* Pops a value from the stack, discarding it */
       [Opcode.POP]: () => {
         this.#pop();
@@ -290,6 +296,36 @@ class VM {
 
         this.#push(a.mod(b));
       },
+      /* Pops two values from the stack and checks if either is true
+       * The result is pushed to the stack
+       */
+      [Opcode.OR]: () => {
+        const b = this.#pop();
+        const a = this.#pop();
+
+        const aTruthy = a.truthy();
+        if (aTruthy.getValue() === true) {
+          this.#push(aTruthy);
+          return;
+        }
+
+        this.#push(b.truthy());
+      },
+      /* Pops two values from the stack and checks if both are true
+       * The result is pushed to the stack
+       */
+      [Opcode.AND]: () => {
+        const b = this.#pop();
+        const a = this.#pop();
+
+        const aTruthy = a.truthy();
+        if (aTruthy.getValue() === false) {
+          this.#push(aTruthy);
+          return;
+        }
+
+        this.#push(b.truthy());
+      },
       /* Pops a value from the stack and negates it (-VALUE)
        * The result is pushed to the stack
        */
@@ -339,13 +375,19 @@ class VM {
 
         /* Since native functions don't run in the VM, we treat them as a special case */
         if (fn.getType() === ValueType.NATIVE_FUNCTION) {
-          const args = [];
-          for (let i = 0; i < argCount; ++i) {
-            args.push(this.#pop());
+          const args = Array(argCount);
+          for (let i = argCount - 1; i >= 0; --i) {
+            args[i] = this.#pop();
           }
 
           const value = fn.getValue();
-          return value(...args);
+
+          const returnValue = value(...args);
+          if (returnValue !== undefined) {
+            this.#push(returnValue);
+          }
+
+          return;
         }
 
         /* Check if arguments match */
@@ -376,10 +418,13 @@ class VM {
           return;
         }
 
+        const returnValue = this.#pop();
+        this.#fp = this.#pop();
+
         this.#frames.pop();
         --this.#frameIdx;
 
-        this.#fp = this.#pop();
+        this.#push(returnValue);
         this.#popEnv();
       },
       /* Accesses a member/index B of A, both popped from the stack
@@ -425,17 +470,7 @@ class VM {
     /* Types */
     globalEnv.addFromObject({
       bool: new TypeValue(ValueType.BOOL, (value) => {
-        const v = value.getValue();
-        switch (value.getType()) {
-          case ValueType.NUMBER:
-            return new BoolValue(v !== 0);
-          case ValueType.STRING:
-            return new BoolValue(c.length !== 0);
-          case ValueType.NONE:
-            return new BoolValue(false);
-        }
-
-        return new ErrorValue(`cannot cast ${value} to bool`);
+        return value.truthy();
       }),
       number: new TypeValue(ValueType.NUMBER, (value) => {
         const v = value.getValue();
@@ -485,7 +520,7 @@ class VM {
    * than that
    */
   #multiStep() {
-    for (let i = 0; i < 80 && this.isRunning(); ++i) {
+    for (let i = 0; i < 128 && this.isRunning(); ++i) {
       this.#step();
     }
   }
@@ -494,6 +529,7 @@ class VM {
   #step() {
     const op = this.#next();
 
+    console.log(this.#fp - 1, op);
     try {
       const fn = this.#handlers[op];
       fn();
