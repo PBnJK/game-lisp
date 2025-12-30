@@ -1,3 +1,9 @@
+/* GameLISP
+ * Example games
+ */
+
+const BUILTIN_GAMES = {
+  pong: `\
 # pong
 # by Pedro B.
 
@@ -91,5 +97,5 @@
   (draw_rect x_ball y_ball 12 12)
   (draw_rect 32 y_player 16 64)
   (draw_rect 592 y_enemy 16 64)
-))
-
+))`,
+};

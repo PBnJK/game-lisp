@@ -36,11 +36,34 @@ body {
 
 .region-title {
   margin: 0;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .region-subtitle {
   margin: 0 0 8px 0;
+}
+
+#editor-docs {
+  display: inline-block;
+  width: 36px;
+  height: 36px;
+}
+
+#editor-examples {
+  background-color: var(--bg-secondary);
+  border: 2px solid var(--font-primary);
+
+  font-family: "IBM Plex Mono", monospace;
+  font-weight: 600;
+  font-size: 14px;
+
+  width: 240px;
+  height: 36px;
+}
+
+#editor-examples:hover {
+  cursor: pointer;
+  background-color: var(--bg-highlight);
 }
 
 #editor-code-editor {
@@ -80,8 +103,10 @@ body {
   border: 2px solid var(--font-primary);
   background-color: var(--bg-secondary);
 
-  width: 32px;
-  height: 32px;
+  padding: 0;
+
+  width: 36px;
+  height: 36px;
 }
 
 .region-button:hover {

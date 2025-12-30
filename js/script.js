@@ -12,10 +12,43 @@ const vm = new VM();
 
 let cachedHash = null;
 
+/* Entry-point */
 function main() {
+  loadGameLibrary();
+
+  hookEditorCallbacks();
+  hookRunnerCallbacks();
+  hookConsoleCallbacks();
+}
+
+/* Loads the main game library */
+function loadGameLibrary() {
   const lib = createLibrary(canvas);
   vm.addLibrary("game", lib);
+}
+/* Hooks up the editor callbacks */
+function hookEditorCallbacks() {
+  const editorExamples = document.getElementById("editor-examples");
+  for (const gameName of Object.keys(BUILTIN_GAMES)) {
+    const option = document.createElement("option");
 
+    option.text = gameName;
+    option.setAttribute("value", gameName);
+
+    editorExamples.appendChild(option);
+  }
+
+  editorExamples.addEventListener("change", (e) => {
+    if (e.target.value === "none") {
+      return;
+    }
+
+    codeEditor.value = BUILTIN_GAMES[e.target.value];
+  });
+}
+
+/* Hooks up the runner callbacks */
+function hookRunnerCallbacks() {
   const runnerStep = document.getElementById("runner-step-button");
   runnerStep.addEventListener("click", () => {
     vm.step();
@@ -40,9 +73,12 @@ function main() {
     vm.stop();
     switchToPlayIcon();
   });
+}
 
-  const runnerTrash = document.getElementById("runner-trash-button");
-  runnerTrash.addEventListener("click", () => {
+/* Hooks up the console callbacks */
+function hookConsoleCallbacks() {
+  const consoleTrash = document.getElementById("runner-trash-button");
+  consoleTrash.addEventListener("click", () => {
     runnerConsole.value = "";
   });
 }

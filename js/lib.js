@@ -4,6 +4,14 @@
 
 "use strict";
 
+/* This is font vector data, painstakingly entered by hand :-)
+ *
+ * Format is akin to SVG paths
+ *
+ * See *draw_text* below
+ */
+const FONTDATA = {};
+
 /* This library comprises the "game engine"
  *
  * All of the functions here are automatically serialized into an Env (see the

@@ -1,0 +1,3 @@
+Fonts:
+  - IBM Plex Mono by IBM. Distributed by Google Fonts.
+  - Façade by Éléonore Fines. Distributed by velvetyne.fr.

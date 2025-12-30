@@ -566,7 +566,7 @@ class VM {
    */
   #multiStep() {
     this.#needsUpdate = true;
-    for (let i = 0; i < 160 && this.isRunning(); ++i) {
+    for (let i = 0; i < 160; ++i) {
       this.#step();
     }
   }
@@ -577,7 +577,6 @@ class VM {
 
     try {
       const fn = this.#handlers[op];
-      console.log(op, fn);
       fn();
     } catch (error) {
       this.stop();
