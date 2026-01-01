@@ -2,6 +2,8 @@
  * Main script
  */
 
+const creditsDialog = document.getElementById("credits-dialog");
+
 const codeEditor = document.getElementById("editor-code-editor");
 
 const canvas = document.getElementById("runner-canvas");
@@ -44,6 +46,11 @@ function hookEditorCallbacks() {
     }
 
     codeEditor.value = BUILTIN_GAMES[e.target.value];
+  });
+
+  const editorCredits = document.getElementById("editor-credits-button");
+  editorCredits.addEventListener("click", () => {
+    creditsDialog.showModal();
   });
 }
 

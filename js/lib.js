@@ -4,14 +4,6 @@
 
 "use strict";
 
-/* This is font vector data, painstakingly entered by hand :-)
- *
- * Format is akin to SVG paths
- *
- * See *draw_text* below
- */
-const FONTDATA = {};
-
 /* This library comprises the "game engine"
  *
  * All of the functions here are automatically serialized into an Env (see the
@@ -20,9 +12,17 @@ const FONTDATA = {};
 class GameLib {
   #keys = {};
 
+  #fontSize = 16;
+  #fontFamily = "Facade-Ouest";
+  #fontStyle = "";
+
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
+
+    this.ctx.fillStyle = "rgb(0, 0, 0)";
+    this.ctx.font = "16px Facade-Ouest";
+    console.log("start");
 
     window.addEventListener("keydown", (e) => {
       this.#keys[e.code] = true;
@@ -71,11 +71,48 @@ class GameLib {
    * @param x: number = X position of the text
    * @param y: number = Y position of the text
    * @param text: str = Text to be drawn
-   *
-   * TODO: implement
    */
   drawText(x, y, text) {
-    this.ctx.fillRect(x.getValue(), y.getValue(), 2, 2);
+    this.ctx.fillText(text.getValue(), x.getValue(), y.getValue());
+  }
+
+  /* @fn set_font_size
+   * Sets the font size used when drawing text
+   *
+   * @param fontSize: string = CSS font size string
+   */
+  setFontSize(fontSize) {
+    const v = fontSize.getValue();
+    if (v !== this.#fontSize) {
+      this.#fontSize = v;
+      this.#updateFont();
+    }
+  }
+
+  /* @fn set_font_family
+   * Sets the font family used when drawing text
+   *
+   * @param fontFamily: string = CSS font family string
+   */
+  setFontFamily(fontFamily) {
+    const v = fontFamily.getValue();
+    if (v !== this.#fontFamily) {
+      this.#fontFamily = v;
+      this.#updateFont();
+    }
+  }
+
+  /* @fn set_font_style
+   * Sets the font style used when drawing text
+   *
+   * @param fontStyle: string = CSS font style string
+   */
+  setFontStyle(fontStyle) {
+    const v = fontStyle.getValue();
+    if (v !== this.#fontStyle) {
+      this.#fontStyle = v;
+      this.#updateFont();
+    }
   }
 
   /* @fn clear
@@ -93,6 +130,11 @@ class GameLib {
    */
   isKeyPressed(key) {
     return new BoolValue(this.#keys[key] === true);
+  }
+
+  #updateFont() {
+    this.ctx.font = `${this.#fontSize}px ${this.#fontFamily} ${this.#fontStyle}`;
+    console.log(this.ctx.font);
   }
 }
 

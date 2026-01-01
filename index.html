@@ -48,7 +48,7 @@
                 <img src="assets/icons/icn_info.svg" alt="Credits" />
               </button>
               <select id="editor-examples">
-                <option value="none">Pick an example game!</option>
+                <option selected disabled>Pick an example game!</option>
               </select>
             </div>
           </div>
@@ -57,7 +57,7 @@
             name="editor-code-editor"
             rows="40"
             cols="80"
-            placeholder='try: (print "hello world!")'
+            placeholder='pick an example game and press the "play" button above the runner!'
             spellcheck="false"
           ></textarea>
         </div>
@@ -120,5 +120,26 @@
         </div>
       </div>
     </main>
+
+    <dialog id="credits-dialog">
+      <h1 class="credits-dialog-header">Credits</h1>
+      <h2 class="credits-dialog-subheader">Fonts:</h2>
+      <ul>
+        <li>IBM Plex Mono by IBM. Distributed by Google Fonts.</li>
+        <li>Façade by Éléonore Fines. Distributed by velvetyne.fr.</li>
+      </ul>
+      <h2 class="credits-dialog-subheader">Thanks to:</h2>
+      <ul>
+        <li>
+          Robert Nystrom and his excellent book, <i>Crafting Interpreters</i>
+        </li>
+        <li>
+          Daniel Holden and his also excellent book, <i>Build Your Own Lisp</i>
+        </li>
+      </ul>
+      <form id="credits-dialog-form" method="dialog">
+        <button class="region-button" id="credits-dialog-button">Wow!</button>
+      </form>
+    </dialog>
   </body>
 </html>

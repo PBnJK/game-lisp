@@ -6,6 +6,13 @@
   --font-primary: #2f2a22;
 }
 
+@font-face {
+  font-family: "Facade-Ouest";
+  src:
+    url("../assets/fonts/Facade-Ouest.otf") format("opentype"),
+    url("../assets/fonts/Facade-Ouest.woff") format("woff");
+}
+
 body {
   font-family: "IBM Plex Mono", monospace;
 
@@ -43,10 +50,9 @@ body {
   margin: 0 0 8px 0;
 }
 
-#editor-docs {
-  display: inline-block;
-  width: 36px;
-  height: 36px;
+#editor-docs-button {
+  width: 32px;
+  height: 32px;
 }
 
 #editor-examples {
@@ -90,6 +96,7 @@ body {
 #region-button-container {
   display: flex;
   flex-direction: row;
+  align-items: center;
 
   gap: 8px;
   margin-bottom: 8px;
@@ -137,4 +144,22 @@ body {
 
   width: 624px;
   height: 256px;
+}
+
+.credits-dialog-header {
+  margin: 0;
+  text-align: center;
+}
+
+.credits-dialog-subheader {
+  margin: 0;
+}
+
+#credits-dialog-form {
+  display: flex;
+  justify-content: center;
+}
+
+#credits-dialog-button {
+  width: 200px;
 }
